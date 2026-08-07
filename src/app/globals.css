@@ -1,0 +1,232 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --header-h: 84px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+html,
+body {
+  background-color: #05070d;
+  color: #0f1424;
+  /* Safety net: if any element anywhere on the site ever overflows the
+     viewport width, this hides the resulting horizontal scrollbar/gap
+     instead of letting the dark body background peek out from behind
+     full-bleed sections like the hero. */
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: rgba(29, 91, 214, 0.35);
+  color: #fff;
+}
+
+/*
+ * Custom scrollbar. The track can't be truly transparent — the browser
+ * paints this gutter using the plain html/body background-color (very
+ * dark, #05070d, left over from the site's all-dark-hero era), which
+ * bleeds through as a solid dark strip down the right edge of every page,
+ * including the homepage's now-light hero. A neutral translucent gray
+ * reads fine over both light and dark sections instead.
+ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(120, 130, 150, 0.18);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 20, 36, 0.35);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 20, 36, 0.5);
+}
+
+@layer utilities {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-6 sm:px-8 lg:px-10;
+  }
+
+  .text-gradient-brand {
+    @apply bg-gradient-to-r from-brand-300 via-brand-400 to-gold-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-400 via-gold-500 to-brand-400 bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply border border-white/10 bg-white/[0.04] backdrop-blur-xl;
+  }
+
+  .glass-light {
+    @apply border border-ink-900/5 bg-white/70 backdrop-blur-xl;
+  }
+
+  .card-elevated {
+    @apply rounded-3xl border border-ink-900/[0.06] bg-white shadow-card;
+  }
+
+  .noise-overlay {
+    @apply pointer-events-none absolute inset-0 bg-noise opacity-40 mix-blend-overlay;
+  }
+
+  .section-dark {
+    @apply relative bg-ink-950 text-white;
+  }
+
+  .btn-focus {
+    @apply outline-none ring-offset-2 ring-offset-ink-950 focus-visible:ring-2 focus-visible:ring-brand-400;
+  }
+
+  /*
+   * ============================================================
+   * TYPOGRAPHY SYSTEM — the only sanctioned text styles on the site.
+   * One token per role, used identically on every page, section, card,
+   * form, and footer. Don't hand-roll text-[…] / font-weight / leading
+   * combinations outside this block — add a token here instead if a new
+   * role is genuinely needed. Sized for a premium enterprise SaaS feel
+   * (Stripe/Linear/Vercel-scale type, not oversized marketing-site type).
+   *
+   * Role                    Desktop / Tablet / Mobile   Weight  Leading
+   * ------------------------------------------------------------------
+   * type-hero   (display)   64 / 52 / 40                700     1.05   — homepage hero only
+   * type-section (h2)       48 / 40 / 32                700     1.15   — every section heading
+   * type-heading (h3)       32 / 28 / 24                700     1.2    — sub-section / content heading
+   * type-card   (h4)        24 / 22 / 20                600     1.3    — card / service / tile title
+   * eyebrow     (label)     14, uppercase, tracking .12em  600         — small section label
+   * type-lead                20 flat                    —       1.7    — large intro paragraph, max 720px
+   * type-body                18 flat                    —       1.7    — standard paragraph
+   * type-secondary           16 flat                    —       1.6    — supporting/muted text
+   * type-small                14 flat                    —       1.5    — captions, meta, helper/validation text
+   * type-nav                  16                         500            — nav links (header + footer)
+   * type-button                16                         600            — every CTA button/button-styled link
+   * type-card-desc              16                         —       1.7    — card/service description copy
+   * type-footer-heading           18                         600            — footer column headings
+   * type-footer-link               15                                       — footer nav links
+   * type-form-label                 16                                       — form input labels
+   * type-form-input                  16                                       — form input/textarea value text
+   * ============================================================
+   */
+
+  .type-hero {
+    @apply max-w-[640px] text-balance text-[2.5rem] font-bold leading-[1.05] tracking-[-0.02em] md:text-[3.25rem] lg:text-[4rem];
+  }
+
+  .type-section {
+    @apply text-balance text-[2rem] font-bold leading-[1.15] tracking-[-0.015em] md:text-[2.5rem] lg:text-[3rem];
+  }
+
+  /* Content heading — sub-section headings that sit between a type-section
+     h2 and a type-card h4 (e.g. a heading inside a content block, not a
+     card). New role; didn't exist as its own scale before. */
+  .type-heading {
+    @apply text-balance text-[1.5rem] font-bold leading-[1.2] tracking-normal md:text-[1.75rem] lg:text-[2rem];
+  }
+
+  /* Card title — any card/tile/service-box/panel heading site-wide. */
+  .type-card {
+    @apply text-balance text-[1.25rem] font-semibold leading-[1.3] tracking-normal md:text-[1.375rem] lg:text-[1.5rem];
+  }
+
+  /* Large paragraph — hero subcopy and section-lead paragraphs that need a
+     bit more presence than standard body text. Capped at ~65-75ch. */
+  .type-lead {
+    @apply max-w-[720px] text-[1.25rem] font-normal leading-[1.7] tracking-normal;
+  }
+
+  /* Body text — standard paragraphs. Capped narrower than type-lead since
+     it's usually the secondary copy under a type-lead intro. */
+  .type-body {
+    @apply max-w-[680px] text-[1.125rem] font-normal leading-[1.7] tracking-normal;
+  }
+
+  /* Secondary text — supporting/muted copy: stat labels, list captions,
+     anything one step quieter than body text but not yet "small". */
+  .type-secondary {
+    @apply text-base font-normal leading-[1.6] tracking-normal;
+  }
+
+  /* Small text — captions, timestamps, and (reused, rather than adding
+     near-duplicate tokens) form helper/validation text. */
+  .type-small {
+    @apply text-sm font-normal leading-[1.5] tracking-normal;
+  }
+
+  /* Button text — every CTA button and button-styled link. */
+  .type-button {
+    @apply text-base font-semibold tracking-normal;
+  }
+
+  /* Navigation — header + footer nav links. No uppercase, no letter-spacing. */
+  .type-nav {
+    @apply text-base font-medium normal-case tracking-normal;
+  }
+
+  /* Card / service description copy — the paragraph under a type-card
+     title. Same size as type-secondary but a taller, more readable
+     line-height since it's often 2-3 lines of running copy. */
+  .type-card-desc {
+    @apply text-base font-normal leading-[1.7] tracking-normal;
+  }
+
+  /* Footer column headings ("Company", "Services", …). */
+  .type-footer-heading {
+    @apply text-lg font-semibold tracking-normal;
+  }
+
+  /* Footer nav links — one notch smaller than the main nav's type-nav. */
+  .type-footer-link {
+    @apply text-[0.9375rem] font-normal tracking-normal;
+  }
+
+  /* Form input labels. */
+  .type-form-label {
+    @apply text-base font-medium tracking-normal;
+  }
+
+  /* Form input/textarea value text — what the user actually types. */
+  .type-form-input {
+    @apply text-base font-normal tracking-normal;
+  }
+
+  /* Eyebrow — the small uppercase label above a hero/section heading
+     ("WHAT WE DO"). */
+  .eyebrow {
+    @apply text-sm font-semibold uppercase tracking-[0.12em] text-brand-400;
+  }
+
+  /* Badge — generic small tag/chip (tech pills, category filters, meta
+     tags). Same size as type-small but keeps its own weight/no-case since
+     it's also used for proper nouns like "Next.js" that shouldn't be
+     shouted, and needs the extra weight to read as a discrete chip. */
+  .type-badge {
+    @apply text-sm font-semibold leading-[1.5] tracking-normal;
+  }
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+}

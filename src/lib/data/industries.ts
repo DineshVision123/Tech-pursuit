@@ -1,0 +1,86 @@
+import {
+  Landmark,
+  HeartPulse,
+  ShoppingBag,
+  Truck,
+  Factory,
+  GraduationCap,
+  Building2,
+  Plane,
+  Zap,
+  Gavel,
+} from 'lucide-react';
+import type { Industry } from '@/types';
+
+export const industries: readonly Industry[] = [
+  {
+    slug: 'financial-services',
+    name: 'Financial Services',
+    description: 'Core banking, payments, and compliance-aware platforms.',
+    icon: Landmark,
+    image: '/images/industries/financial-services.webp',
+  },
+  {
+    slug: 'healthcare',
+    name: 'Healthcare',
+    description: 'Patient experience, interoperability, and secure data systems.',
+    icon: HeartPulse,
+    image: '/images/industries/healthcare.webp',
+  },
+  {
+    slug: 'retail-ecommerce',
+    name: 'Retail & eCommerce',
+    description: 'Storefronts, inventory intelligence, and personalization.',
+    icon: ShoppingBag,
+    image: '/images/industries/retail-ecommerce.webp',
+  },
+  {
+    slug: 'logistics-supply-chain',
+    name: 'Logistics & Supply Chain',
+    description: 'Fleet visibility, routing, and real-time operations.',
+    icon: Truck,
+    image: '/images/industries/logistics-supply-chain.webp',
+  },
+  {
+    slug: 'manufacturing',
+    name: 'Manufacturing',
+    description: 'Plant data, IoT integration, and operational dashboards.',
+    icon: Factory,
+    image: '/images/industries/manufacturing.webp',
+  },
+  {
+    slug: 'education-edtech',
+    name: 'Education & EdTech',
+    description: 'Learning platforms, admin systems, and student engagement.',
+    icon: GraduationCap,
+    image: '/images/industries/education-edtech.webp',
+  },
+  {
+    slug: 'real-estate-proptech',
+    name: 'Real Estate & PropTech',
+    description: 'Listing platforms, virtual tours, and portfolio management tools.',
+    icon: Building2,
+    image: '/images/industries/real-estate-proptech.webp',
+  },
+  {
+    slug: 'travel-hospitality',
+    name: 'Travel & Hospitality',
+    description: 'Booking engines, guest experience, and property management systems.',
+    icon: Plane,
+    image: '/images/industries/travel-hospitality.webp',
+  },
+  {
+    slug: 'energy-utilities',
+    name: 'Energy & Utilities',
+    description: 'Grid monitoring, consumption analytics, and field service tools.',
+    icon: Zap,
+    image: '/images/industries/energy-utilities.webp',
+  },
+  {
+    slug: 'government-public-sector',
+    name: 'Government & Public Sector',
+    description: 'Citizen services, case management, and accessibility-first portals.',
+    icon: Gavel,
+    image: '/images/industries/government-public-sector.webp',
+  },
+] as const;
