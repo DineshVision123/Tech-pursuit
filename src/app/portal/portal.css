@@ -1,0 +1,1775 @@
+/*
+ * Invoice Portal design tokens.
+ *
+ * No `@import "tailwindcss"` here (unlike the original, which ran on
+ * Tailwind v4's CSS-first config) — Tailwind's base/utilities are already
+ * loaded once, globally, via the root layout's `src/app/globals.css`
+ * import, which is an ancestor of every route including this one. This
+ * file only needs to contribute its own custom tokens/`.vs-*` classes.
+ *
+ * A finance-grade surface: deep-ink navy chrome, a calm off-white canvas, and
+ * a violet→indigo accent that reads "modern SaaS billing" without shouting.
+ * Inter (body) + Space Grotesk (display) pairing.
+ *
+ * Status palette maps 1:1 to the Report §4 lifecycle:
+ *   pending → amber · approved → violet · rejected → rose
+ *   submitted → sky · paid → emerald
+ */
+
+:root {
+  /* Surfaces */
+  --portal-bg: #f4f5fb;
+  --portal-bg-soft: #ecefff;
+  --portal-surface: #ffffff;
+  --portal-surface-2: #fafaff;
+  --portal-ink: #0b1020;
+  --portal-ink-2: #141a30;
+
+  /* Text */
+  --portal-text: #10152b;
+  --portal-text-2: #4b5468;
+  --portal-text-3: #808aa3;
+  --portal-text-inv: #f5f6ff;
+  --portal-text-inv-2: rgba(245, 246, 255, 0.62);
+
+  /* Brand accent */
+  --portal-accent: #6d5cf6;
+  --portal-accent-2: #8b7bff;
+  --portal-accent-deep: #4b3cd6;
+  --portal-accent-soft: #eeecff;
+  --portal-accent-glow: rgba(109, 92, 246, 0.35);
+
+  /* Status */
+  --portal-pending: #d97706;
+  --portal-pending-soft: #fef3e2;
+  --portal-approved: #7c5cf6;
+  --portal-approved-soft: #efeaff;
+  --portal-rejected: #e11d63;
+  --portal-rejected-soft: #fde7ef;
+  --portal-submitted: #3b5bc9;
+  --portal-submitted-soft: #e8ecfb;
+  --portal-paid: #059669;
+  --portal-paid-soft: #e2f6ee;
+
+  /* Lines + shadows */
+  --portal-border: #e6e7f2;
+  --portal-border-strong: #d5d7e8;
+  --portal-ring: rgba(109, 92, 246, 0.4);
+  --portal-shadow-sm: 0 1px 2px rgba(16, 21, 43, 0.06), 0 1px 3px rgba(16, 21, 43, 0.04);
+  --portal-shadow-md: 0 4px 12px rgba(16, 21, 43, 0.08), 0 2px 4px rgba(16, 21, 43, 0.04);
+  --portal-shadow-lg: 0 24px 48px -12px rgba(16, 21, 43, 0.22);
+  --portal-shadow-glow: 0 12px 32px -8px var(--portal-accent-glow);
+
+  --portal-radius: 14px;
+  --portal-radius-lg: 20px;
+  --portal-font-body: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --portal-font-display: var(--font-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * This stylesheet is imported only from `src/app/portal/layout.tsx` — it
+ * never loads on marketing pages — but the rules below are scoped under
+ * `.portal-app` anyway (applied to that layout's own wrapper div) rather
+ * than left as bare `body`/`h1`/`a` selectors like the original. Belt and
+ * suspenders: bare element selectors here would otherwise win a cascade
+ * fight against the marketing site's own `body`/heading rules in
+ * `src/app/globals.css` during a client-side route transition, since both
+ * stylesheets can be present in the document at once for a moment.
+ *
+ * Note: the original also set `html { font-size: 87.5% }` as a rem-scaling
+ * base for this whole design system. That can't be scoped the same way
+ * (`rem` is always relative to the real root `<html>`, which the marketing
+ * site also depends on for its own type scale) — dropped rather than risk
+ * shrinking/enlarging the main site's typography. The portal's rem-sized
+ * spacing/type will read very slightly larger than originally tuned as a
+ * result; a cosmetic difference only, not a structural one.
+ */
+.portal-app {
+  background: var(--portal-bg);
+  color: var(--portal-text);
+  font-family: var(--portal-font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* A soft aurora wash behind the whole app for depth. */
+.portal-app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60rem 40rem at 12% -8%, rgba(109, 92, 246, 0.1), transparent 60%),
+    radial-gradient(48rem 32rem at 108% 8%, rgba(14, 165, 233, 0.08), transparent 55%);
+  pointer-events: none;
+}
+
+.portal-app h1,
+.portal-app h2,
+.portal-app h3,
+.portal-app h4 {
+  font-family: var(--portal-font-display);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.portal-app a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---- Reusable primitives ---------------------------------------------- */
+
+.card {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: var(--portal-radius-lg);
+  box-shadow: var(--portal-shadow-sm);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--portal-font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.6rem 1.05rem;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--portal-accent-2), var(--portal-accent-deep));
+  color: #fff;
+  box-shadow: var(--portal-shadow-glow);
+}
+.btn-primary:hover {
+  box-shadow: 0 16px 40px -8px var(--portal-accent-glow);
+  transform: translateY(-1px);
+}
+.btn-ghost {
+  background: var(--portal-surface);
+  border-color: var(--portal-border-strong);
+  color: var(--portal-text);
+}
+.btn-ghost:hover {
+  border-color: var(--portal-accent);
+  color: var(--portal-accent-deep);
+}
+.btn-danger {
+  background: var(--portal-rejected-soft);
+  color: var(--portal-rejected);
+  border-color: transparent;
+}
+.btn-danger:hover {
+  background: var(--portal-rejected);
+  color: #fff;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  font-family: var(--portal-font-body);
+  font-size: 0.9rem;
+  color: var(--portal-text);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-ring);
+}
+/* Hide the native up/down spinner on number inputs (Qty, Rate, etc.) —
+ *  keeps the numeric keyboard/validation, just drops the browser widget. */
+.input[type="number"]::-webkit-outer-spin-button,
+.input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--portal-text-3);
+  margin-bottom: 0.35rem;
+}
+
+/* The one-line helper sentence under a page's topbar title (the page title
+ * itself always lives in TopBar.tsx — never duplicated in the page body).
+ * Explicit size so it doesn't silently inherit the 16px browser default. */
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--portal-text-2);
+  margin: 0;
+}
+
+/* Status pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  line-height: 1;
+}
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+/* Number tabular alignment for money columns */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+::selection {
+  background: var(--portal-accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---- App shell -------------------------------------------------------- */
+
+.vs-shell {
+  min-height: 100vh;
+}
+
+/*
+ * `position: fixed` rather than the original `sticky` — sticky only stays
+ * pinned within its own containing block's height, and on a long page (the
+ * company-settings form especially) that block can end up taller than the
+ * sidebar itself in a way that leaves the sidebar's dark background not
+ * actually covering the full scrolled height. Fixed positioning anchors it
+ * to the viewport directly regardless of how tall `.vs-main` grows, which
+ * is what "always full height" actually needs. `.vs-main` below gets a
+ * matching `margin-left` so content doesn't render underneath it.
+ */
+.vs-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 264px;
+  height: 100vh;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--portal-ink) 0%, var(--portal-ink-2) 100%);
+  color: var(--portal-text-inv);
+  padding: 1.4rem 1rem;
+  overflow: hidden;
+}
+.vs-sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(28rem 20rem at 20% 0%, rgba(109, 92, 246, 0.28), transparent 60%);
+  pointer-events: none;
+}
+
+.vs-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.4rem 0.5rem 1.3rem;
+  position: relative;
+  z-index: 1;
+}
+.vs-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--portal-accent-2), var(--portal-accent-deep));
+  color: #fff;
+  box-shadow: var(--portal-shadow-glow);
+}
+/* Logo variant: logo.jpg ships on its own dark background and carries its own
+   wordmark, so drop the purple gradient rather than layering two brand colours.
+   object-fit: cover + overflow: hidden keeps the JPG square inside the 11px
+   radius without letterboxing. */
+.vs-brand-mark--logo {
+  background: #000;
+  overflow: hidden;
+}
+.vs-brand-mark--logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Login card only: the logo is a centred focal point there, so it gets more
+   room than the 38px sidebar mark. Scoped so the sidebar keeps the base size. */
+.vs-auth-brand .vs-brand-mark--logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+}
+.vs-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.vs-brand-text strong {
+  font-family: var(--portal-font-display);
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+.vs-brand-text small {
+  font-size: 0.72rem;
+  color: var(--portal-text-inv-2);
+}
+
+.vs-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  position: relative;
+  z-index: 1;
+}
+.vs-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.62rem 0.8rem;
+  border-radius: 11px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--portal-text-inv-2);
+  transition: color 0.18s ease;
+}
+.vs-nav-item:hover {
+  color: var(--portal-text-inv);
+}
+.vs-nav-item.is-active {
+  color: #fff;
+  font-weight: 600;
+}
+.vs-nav-icon {
+  position: relative;
+  z-index: 1;
+}
+.vs-nav-item span {
+  position: relative;
+  z-index: 1;
+}
+.vs-nav-active {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(139, 123, 255, 0.25);
+}
+
+.vs-sidebar-foot {
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
+}
+.vs-user {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.vs-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--portal-accent-2), var(--portal-submitted));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+.vs-user-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
+}
+.vs-user-meta strong {
+  font-size: 0.8rem;
+}
+.vs-user-meta small {
+  font-size: 0.7rem;
+  color: var(--portal-text-inv-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.vs-logout-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--portal-text-inv-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.vs-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--portal-text-inv);
+}
+
+.vs-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 264px; /* clears the fixed .vs-sidebar — reset to 0 below 900px, where it's no longer fixed */
+}
+
+.vs-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: color-mix(in srgb, var(--portal-bg) 82%, transparent);
+  backdrop-filter: saturate(150%) blur(12px);
+  border-bottom: 1px solid var(--portal-border);
+}
+.vs-topbar-title {
+  font-size: 1.35rem;
+}
+.vs-topbar-title-suffix {
+  color: var(--portal-text-3);
+  font-weight: 500;
+}
+.vs-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.vs-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 11px;
+  color: var(--portal-text-3);
+}
+.vs-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--portal-font-body);
+  font-size: 0.85rem;
+  color: var(--portal-text);
+  width: 12rem;
+}
+.vs-content {
+  padding: 1.8rem 2rem 3rem;
+  max-width: 1180px;
+  width: 100%;
+}
+
+/* ---- Fixed bottom action bar (invoice form Save / Review and submit) -- */
+.form-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--portal-surface);
+  border-top: 1px solid var(--portal-border);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.07);
+}
+.form-action-bar-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+@media (min-width: 901px) {
+  .form-action-bar {
+    left: 264px;
+  }
+}
+@media (max-width: 900px) {
+  .form-action-bar-inner {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* ---- Review split (Email compose + preview, side by side) ------------ */
+.review-split {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+@media (max-width: 1100px) {
+  .review-split {
+    flex-direction: column;
+  }
+}
+
+/* Caps the email preview to the viewport and scrolls it internally only
+   while it sits side by side with the compose form — once `.review-split`
+   stacks (narrower than 1100px) it should flow with the page like everything
+   else, not trap the preview in its own nested scrollbar. */
+.review-preview-scroll {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+@media (max-width: 1100px) {
+  .review-preview-scroll {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* ---- Generic layout helpers ------------------------------------------ */
+
+.grid-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.row {
+  display: flex;
+  align-items: center;
+}
+.between {
+  justify-content: space-between;
+}
+.muted {
+  color: var(--portal-text-2);
+}
+.muted-3 {
+  color: var(--portal-text-3);
+}
+.section-title {
+  font-size: 1.05rem;
+  margin-bottom: 0.9rem;
+}
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  background: var(--portal-surface-2);
+}
+.attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--portal-text);
+  text-align: left;
+  cursor: pointer;
+}
+.attachment-name:hover {
+  color: var(--portal-accent-deep);
+  text-decoration: underline;
+}
+.attachment-size {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.section-subtitle {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--portal-text-3);
+  margin: 1.25rem 0 0.7rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--portal-border);
+}
+
+@media (max-width: 900px) {
+  .vs-sidebar {
+    position: relative;
+    width: auto;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.8rem 1rem;
+  }
+  .vs-main {
+    margin-left: 0;
+  }
+  .vs-nav {
+    flex-direction: row;
+    margin-left: auto;
+  }
+  .vs-nav-item span,
+  .vs-sidebar-foot {
+    display: none;
+  }
+  .grid-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vs-content {
+    padding: 1.2rem 1rem 2.5rem;
+  }
+  .vs-search {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .grid-tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Stacks + grids --------------------------------------------------- */
+
+.stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+.pad {
+  padding: 1.3rem;
+}
+.pad-x {
+  padding-inline: 1.3rem;
+}
+.pad-top {
+  padding-top: 1.3rem;
+}
+.right {
+  text-align: right;
+}
+.strong {
+  font-weight: 700;
+}
+.mono {
+  font-family: var(--portal-font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Stat cards ------------------------------------------------------- */
+
+.stat-card {
+  position: relative;
+  padding: 1.15rem 1.2rem 1.25rem;
+  overflow: hidden;
+}
+.stat-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--portal-text-2);
+}
+.stat-value {
+  font-family: var(--portal-font-display);
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.stat-sub {
+  margin-top: 0.5rem;
+  font-size: 0.76rem;
+}
+.stat-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  opacity: 0.85;
+}
+
+/* ---- Status distribution --------------------------------------------- */
+
+.dist-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--portal-bg-soft);
+}
+.dist-seg {
+  height: 100%;
+}
+.dist-seg + .dist-seg {
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+.dist-legend {
+  list-style: none;
+  padding: 0;
+  margin: 1.1rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.55rem 1.2rem;
+}
+.dist-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+.dist-legend strong {
+  margin-left: auto;
+}
+.dist-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+/* ---- Activity feed ---------------------------------------------------- */
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.feed-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--portal-border);
+}
+.feed-item:last-child {
+  border-bottom: none;
+}
+.feed-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--portal-accent-soft);
+  color: var(--portal-accent-deep);
+}
+.feed-body {
+  min-width: 0;
+}
+.feed-body p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.feed-body time {
+  font-size: 0.73rem;
+}
+
+/* ---- Table ------------------------------------------------------------ */
+
+.table-wrap {
+  overflow-x: auto;
+  position: relative;
+}
+/* Hint that a table scrolls horizontally on narrow viewports — a soft fade
+ * at the right edge, purely decorative (no JS scroll-tracking). */
+@media (max-width: 900px) {
+  .table-wrap::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    background: linear-gradient(to right, transparent, var(--portal-surface));
+    pointer-events: none;
+  }
+}
+.itable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.itable thead th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--portal-text-3);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--portal-border);
+  white-space: nowrap;
+}
+.itable thead th.right {
+  text-align: right;
+}
+.itable-row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.itable-row td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--portal-border);
+  vertical-align: middle;
+}
+.itable-row:last-child td {
+  border-bottom: none;
+}
+.cust {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.cust small {
+  font-size: 0.74rem;
+}
+
+.empty {
+  text-align: center;
+  color: var(--portal-text-3);
+  font-size: 0.9rem;
+  padding: 2.5rem 1rem;
+}
+
+/* ---- API error -------------------------------------------------------- */
+
+.api-error {
+  display: flex;
+  gap: 1rem;
+  padding: 1.4rem;
+  border-color: var(--portal-pending-soft);
+}
+.api-error-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--portal-pending-soft);
+  color: var(--portal-pending);
+}
+.api-error h3 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+.api-error code {
+  font-family: var(--portal-font-display);
+  font-size: 0.8rem;
+  background: var(--portal-bg-soft);
+  padding: 0.05rem 0.35rem;
+  border-radius: 5px;
+}
+
+/* ---- Buttons + misc small --------------------------------------------- */
+
+.btn-sm {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+}
+.full {
+  width: 100%;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-surface);
+  color: var(--portal-text-3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.icon-btn:hover:not(:disabled) {
+  color: var(--portal-rejected);
+  border-color: var(--portal-rejected);
+  background: var(--portal-rejected-soft);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--portal-text-2);
+  transition: color 0.15s ease;
+}
+.back-link:hover {
+  color: var(--portal-accent-deep);
+}
+.wrap-gap {
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Filters ---------------------------------------------------------- */
+
+.filters {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.filter-chip {
+  position: relative;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-surface);
+  color: var(--portal-text-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filter-chip:hover {
+  color: var(--portal-text);
+  border-color: var(--portal-accent);
+}
+.filter-chip.is-active {
+  font-weight: 700;
+}
+.filter-active {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  z-index: 0;
+}
+.filter-label {
+  position: relative;
+  z-index: 1;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 10px;
+  background: var(--portal-surface);
+  min-width: 220px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.search-box:focus-within {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-ring);
+}
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--portal-font-body);
+  font-size: 0.86rem;
+  color: var(--portal-text);
+}
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--portal-text-3);
+  cursor: pointer;
+  padding: 0.1rem;
+  border-radius: 6px;
+}
+.search-clear:hover {
+  color: var(--portal-text);
+  background: var(--portal-surface-2);
+}
+
+/* ---- Form ------------------------------------------------------------- */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.1rem;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.field {
+  display: block;
+}
+.customer-picker {
+  margin-bottom: 0.9rem;
+}
+.customer-picker .select {
+  flex: 1;
+}
+
+/* ---- Customer combobox (searchable, with per-row delete) -------------- */
+.combobox {
+  position: relative;
+  flex: 1;
+}
+.combobox-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  text-align: left;
+}
+.combobox-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  box-shadow: var(--portal-shadow-md);
+  overflow: hidden;
+  z-index: 20;
+}
+.combobox-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--portal-border);
+}
+.combobox-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--portal-font-body);
+  font-size: 0.87rem;
+  color: var(--portal-text);
+}
+.combobox-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.35rem;
+}
+.combobox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 8px;
+}
+.combobox-row:hover {
+  background: var(--portal-surface-2);
+}
+.combobox-row-label,
+.combobox-row-new {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.55rem 0.6rem;
+  font-family: var(--portal-font-body);
+  font-size: 0.87rem;
+  color: var(--portal-text);
+  cursor: pointer;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combobox-row-new {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--portal-accent-deep);
+  font-weight: 600;
+  border-bottom: 1px solid var(--portal-border);
+  border-radius: 0;
+  margin-bottom: 0.3rem;
+}
+.combobox-row-delete {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.combobox-empty {
+  padding: 0.8rem 0.6rem;
+  font-size: 0.83rem;
+  text-align: center;
+}
+.field-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+.field-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.85rem;
+}
+.field-grid-5 {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr 1.4fr 1fr;
+  gap: 0.85rem;
+}
+@media (max-width: 780px) {
+  .field-grid-5 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .field-grid-2,
+  .field-grid-3,
+  .field-grid-5 {
+    grid-template-columns: 1fr;
+  }
+}
+.input-readonly {
+  background: var(--portal-bg-soft);
+  color: var(--portal-text-2);
+  cursor: default;
+}
+
+.lines-head,
+.line-row {
+  display: grid;
+  /* Fixed caps, not `1fr` — a flexible track has no upper bound and grows to
+   * fill whatever space is left, which read as oversized on a wide screen. */
+  grid-template-columns: minmax(160px, 180px) 80px 80px 80px 95px 40px;
+  gap: 0.6rem;
+  align-items: start;
+}
+.lines-head {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--portal-text-3);
+  padding: 0 0.1rem 0.5rem;
+  white-space: nowrap;
+}
+.lines-head .right {
+  text-align: right;
+}
+.line-row {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--portal-border);
+  overflow: hidden;
+}
+.line-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.input-sub {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.6rem;
+  color: var(--portal-text-2);
+}
+.line-amount {
+  padding-top: 0.6rem;
+}
+@media (max-width: 620px) {
+  .lines-head {
+    display: none;
+  }
+  .line-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.8rem 0;
+  }
+  .line-cell {
+    grid-column: 1 / -1;
+  }
+  .line-amount {
+    padding-top: 0;
+  }
+}
+
+.invoice-form-title {
+  font-size: 1.4rem;
+}
+
+/* ---- Compact type + spacing on phones --------------------------------- */
+@media (max-width: 640px) {
+  .pad {
+    padding: 1rem;
+  }
+  .section-title {
+    font-size: 0.95rem;
+  }
+  .btn {
+    font-size: 0.82rem;
+    padding: 0.55rem 0.85rem;
+  }
+  .invoice-form-title {
+    font-size: 1.05rem;
+  }
+  .doc {
+    padding: 1.1rem;
+  }
+  .doc-no {
+    font-size: 1.25rem;
+  }
+  .doc-meta {
+    gap: 1rem;
+  }
+  .doc-dates {
+    gap: 1rem;
+  }
+  .itable {
+    font-size: 0.8rem;
+  }
+  .itable thead th,
+  .itable-row td {
+    padding: 0.6rem 0.5rem;
+  }
+}
+
+.summary-rail {
+  position: sticky;
+  top: 84px;
+}
+.summary-card {
+  border-color: var(--portal-border-strong);
+}
+.sum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+}
+.sum-divider {
+  height: 1px;
+  background: var(--portal-border);
+  margin: 0.5rem 0;
+}
+.sum-total {
+  font-family: var(--portal-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.tax-input {
+  width: 62px;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.82rem;
+}
+.summary-note {
+  margin-top: 0.7rem;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+.form-error,
+.inline-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--portal-rejected);
+  background: var(--portal-rejected-soft);
+  border-radius: 9px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.8rem;
+}
+.inline-error {
+  margin: 0;
+}
+
+/* ---- Detail ----------------------------------------------------------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.1rem;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.doc {
+  padding: 1.6rem;
+}
+.doc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--portal-border);
+}
+.doc-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--portal-text-3);
+  margin: 0;
+}
+.doc-no {
+  font-size: 1.7rem;
+  margin-top: 0.1rem;
+}
+.doc-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.2rem 0;
+  flex-wrap: wrap;
+}
+.doc-meta strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.doc-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+.doc-contact span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.doc-dates {
+  display: flex;
+  gap: 1.6rem;
+  text-align: right;
+}
+.doc-lines {
+  margin-top: 0.5rem;
+}
+.doc-totals {
+  margin-left: auto;
+  width: min(320px, 100%);
+  margin-top: 1.2rem;
+}
+.doc-notes {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--portal-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.doc-notes p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.memo {
+  border-color: var(--portal-pending-soft);
+  background: linear-gradient(180deg, var(--portal-surface), var(--portal-pending-soft));
+}
+.memo p {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+}
+
+/* ---- Pipeline --------------------------------------------------------- */
+
+.pipeline {
+  position: relative;
+}
+.pipeline-track {
+  position: absolute;
+  top: 15px;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  background: var(--portal-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pipeline-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--portal-approved), var(--portal-submitted), var(--portal-paid));
+  border-radius: 2px;
+}
+.pipeline-steps {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+.pipeline-node {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--portal-surface);
+  border: 2px solid var(--portal-border-strong);
+  color: var(--portal-text-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+  z-index: 1;
+}
+.pipeline-node.done {
+  background: var(--portal-accent);
+  border-color: var(--portal-accent);
+  color: #fff;
+}
+.pipeline-node.current {
+  border-color: var(--portal-accent);
+  color: #fff;
+  background: var(--portal-accent-deep);
+  box-shadow: 0 0 0 4px var(--portal-accent-soft);
+}
+.pipeline-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--portal-text-3);
+}
+.pipeline-label.current {
+  color: var(--portal-text);
+}
+.pipeline.is-rejected .pipeline-node {
+  border-color: var(--portal-rejected-soft);
+}
+.pipeline-rejected {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--portal-rejected-soft);
+  color: var(--portal-rejected);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.pipeline-rejected-badge {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--portal-rejected);
+  color: #fff;
+}
+
+/* ---- Timeline --------------------------------------------------------- */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--portal-border);
+}
+.timeline-item {
+  position: relative;
+  padding: 0 0 1rem 1.4rem;
+}
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--portal-accent);
+  border: 2px solid var(--portal-surface);
+  box-shadow: 0 0 0 2px var(--portal-accent-soft);
+}
+.timeline-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.timeline-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.74rem;
+}
+
+/* ---- Modal ------------------------------------------------------------ */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 16, 32, 0.45);
+  backdrop-filter: blur(3px);
+  padding: 1rem;
+}
+.modal {
+  width: min(440px, 100%);
+  padding: 1.5rem;
+  box-shadow: var(--portal-shadow-lg);
+}
+.modal h3 {
+  font-size: 1.1rem;
+}
+.modal p {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.85rem;
+}
+.modal-wide {
+  width: min(920px, 96vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* ---- Banners ------------------------------------------------------------ */
+
+.banner {
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.banner--danger {
+  background: var(--portal-rejected-soft);
+  color: var(--portal-rejected);
+}
+
+/* ---- Auth (login) ------------------------------------------------------- */
+
+.vs-auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+.vs-auth-card {
+  width: min(400px, 100%);
+  padding: 2rem 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+/* Centred lockup: logo stacked above the wordmark, both centred in the card.
+   Only used by app/login/page.tsx. */
+.vs-auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+}
+.vs-auth-brand strong {
+  font-family: var(--portal-font-display);
+  font-size: 0.95rem;
+}
+.vs-auth-title {
+  font-size: 1.35rem;
+  margin-top: 0.2rem;
+}
+.vs-input-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.vs-input-icon svg {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--portal-text-3);
+  pointer-events: none;
+}
+.vs-input-icon .input {
+  padding-left: 2.35rem;
+}
+.vs-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--portal-accent-deep);
+  cursor: pointer;
+}
+.vs-link-btn:hover {
+  text-decoration: underline;
+}
+.vs-link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.vs-spin {
+  animation: vs-spin 0.8s linear infinite;
+}
+@keyframes vs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* "Download" on the invoice detail page — no server-side PDF generation,
+ * so it triggers the browser's print dialog (every browser offers "Save as
+ * PDF"). `.no-print` marks chrome/side-content to hide, leaving just the
+ * invoice document card behind. */
+@media print {
+  .vs-sidebar,
+  .vs-topbar,
+  .no-print {
+    display: none !important;
+  }
+  .vs-main,
+  .vs-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .detail-grid {
+    display: block !important;
+  }
+  .card.doc {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .pdf-preview-shell {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .review-split {
+    display: block !important;
+  }
+}

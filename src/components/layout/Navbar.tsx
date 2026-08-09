@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { LogIn, Menu, X } from 'lucide-react';
 import { primaryNav } from '@/lib/data/nav';
 import { cn } from '@/lib/cn';
 
@@ -89,7 +89,19 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden items-center gap-5 lg:flex">
+          {/* Staff-only invoice portal — separate app entirely (own auth,
+              own database), just surfaced here per the "Login" nav link. */}
+          <Link
+            href="/portal"
+            className={cn(
+              'type-nav inline-flex items-center gap-1.5 transition-colors',
+              darkText ? 'text-ink-600 hover:text-ink-900' : 'text-ink-200 hover:text-white',
+            )}
+          >
+            <LogIn size={15} />
+            Login
+          </Link>
           <Link
             href="/contact"
             className="type-button btn-focus inline-flex items-center rounded-full bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-2.5 text-white shadow-glow transition-transform hover:scale-[1.03]"
@@ -131,6 +143,13 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/portal"
+                className="type-nav flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-ink-600 transition-colors hover:bg-surface-soft hover:text-ink-900"
+              >
+                <LogIn size={16} />
+                Login
+              </Link>
               <Link
                 href="/contact"
                 className="type-button mt-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-3 py-2.5 text-center text-white"

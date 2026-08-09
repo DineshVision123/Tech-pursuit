@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Navbar } from '@/components/layout/Navbar';
-import { Footer } from '@/components/layout/Footer';
-import { SmoothScrollProvider } from '@/components/layout/SmoothScrollProvider';
 
 // One font family for the entire site, per the typography system — no
 // mixing. All weights the type scale needs (400–800) come from this single
@@ -52,16 +49,17 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Truly global shell only — html/body, the one Inter font instance, and
+ * site-wide metadata. No Navbar/Footer/smooth-scroll here: those are
+ * marketing-only chrome that now lives in `(site)/layout.tsx`, so that
+ * `/portal/**` (its own Sidebar/TopBar chrome) and the public
+ * `/pay/[token]` page (no chrome at all) don't inherit them.
+ */
 export default function RootLayout({ children }: { readonly children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="bg-ink-950 font-body text-ink-900 antialiased">
-        <SmoothScrollProvider>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-        </SmoothScrollProvider>
-      </body>
+      <body className="bg-ink-950 font-body text-ink-900 antialiased">{children}</body>
     </html>
   );
 }
