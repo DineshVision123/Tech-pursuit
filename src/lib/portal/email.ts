@@ -97,9 +97,11 @@ const EMAIL_TABLE_TEXT = "#111827";
  *  value column still claims exactly the width its content needs (same
  *  approach a working reference invoice email uses), so "Aug 19, 2026"
  *  renders on one line instead of getting forced to wrap or fracture.
- *  "Amount ($)" (not "Invoice Amount ($)") is deliberate — the header row
- *  is `nowrap` too now (see below), and this was the one label wide enough
- *  to push the whole row past a phone-width inbox render on its own. */
+ *  Headers are the pressure-release instead: they're allowed to wrap at
+ *  a space (see the `<th>` below, deliberately with no `white-space`
+ *  override) so "Invoice Amount ($)" becomes two natural lines —
+ *  "Invoice" / "Amount ($)" — rather than needing its own full-width
+ *  line or a shortened label. */
 const EMAIL_TABLE_COLS = [
   { label: "Employee", align: "left", width: "24%" },
   { label: "Invoice No.", align: "left", width: "15%" },
@@ -107,7 +109,7 @@ const EMAIL_TABLE_COLS = [
   { label: "Due Date", align: "left", width: "14%" },
   { label: "Qty", align: "center", width: "8%" },
   { label: "Rate", align: "right", width: "11%" },
-  { label: "Amount ($)", align: "right", width: "14%" },
+  { label: "Invoice Amount ($)", align: "right", width: "14%" },
 ] as const;
 
 /** Fixed-format values stay `nowrap` — a date or invoice no. split across
@@ -146,7 +148,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:8px;text-transform:uppercase;letter-spacing:0.01em;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
@@ -197,7 +199,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
       </p>
     </div>
     <div style="padding:12px 6px 14px;overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:8px;color:${EMAIL_TABLE_TEXT};">
+      <table style="width:100%;border-collapse:collapse;font-size:9px;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -314,16 +316,17 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   // `buildInvoiceEmailHtml`'s table) — the Amount column stays `nowrap` so
   // "$5,400.00" renders on one line; the wrapping `<div>` below gets
   // `overflow-x:auto` so the rare phone-width render that's still too wide
-  // scrolls instead of clipping. "Amount ($)" (not "Invoice Amount ($)")
-  // for the same reason as `buildInvoiceEmailHtml` — headers are `nowrap`
-  // too, and the longer label was the widest thing in the row.
+  // scrolls instead of clipping. Headers have no `white-space` override
+  // (same as `buildInvoiceEmailHtml`), so "Invoice Amount ($)" wraps at
+  // its own space into "Invoice" / "Amount ($)" instead of needing a
+  // shortened label.
   const reminderCols = [
     { label: "Employee", align: "left", width: "22%" },
     { label: "Invoice No.", align: "left", width: "17%" },
     { label: "Invoice Date", align: "left", width: "16%" },
     { label: "Due Date", align: "left", width: "16%" },
     { label: "Days Overdue", align: "center", width: "15%" },
-    { label: "Amount ($)", align: "right", width: "14%" },
+    { label: "Invoice Amount ($)", align: "right", width: "14%" },
   ] as const;
   const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
     `padding:4px 3px;border:1px solid #000000;text-align:${align};`;
@@ -345,7 +348,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="width:${c.width};padding:4px 3px;border:1px solid #000000;text-align:${c.align};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:4px 3px;border:1px solid #000000;text-align:${c.align};font-size:8px;text-transform:uppercase;letter-spacing:0.01em;">${c.label}</th>`,
     )
     .join("");
 
@@ -373,7 +376,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
       <p style="margin:0 0 10px;">I hope you are doing well.</p>
       <p style="margin:0 0 10px;">I am writing to follow up on the payment status of the below invoice:</p>
       <div style="overflow-x:auto;margin:0 -10px;">
-        <table style="width:100%;border-collapse:collapse;font-size:8px;margin:10px 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:9px;margin:10px 0;">
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>

@@ -107,9 +107,11 @@ const EMAIL_TABLE_TEXT = "#111827";
  *  table's default auto layout, not a hard cap: each nowrap value column
  *  still claims exactly the width its content needs, matching a working
  *  reference invoice email's look (dates/amounts on one line each).
- *  "Amount ($)" (not "Invoice Amount ($)") is deliberate — the header row
- *  is `nowrap` too now, and this was the one label wide enough to push the
- *  whole row past a phone-width inbox render on its own. */
+ *  Headers are the pressure-release instead: they're allowed to wrap at a
+ *  space (see the `<th>` below, deliberately with no `whiteSpace`
+ *  override) so "Invoice Amount ($)" becomes two natural lines —
+ *  "Invoice" / "Amount ($)" — rather than needing its own full-width
+ *  line or a shortened label. */
 const EMAIL_TABLE_COLS = [
   { label: "Employee", align: "left", width: "24%" },
   { label: "Invoice No.", align: "left", width: "15%" },
@@ -117,16 +119,16 @@ const EMAIL_TABLE_COLS = [
   { label: "Due Date", align: "left", width: "14%" },
   { label: "Qty", align: "center", width: "8%" },
   { label: "Rate", align: "right", width: "11%" },
-  { label: "Amount ($)", align: "right", width: "14%" },
+  { label: "Invoice Amount ($)", align: "right", width: "14%" },
 ] as const;
 
 /** Fixed-format values never wrap — an invoice no. or date split across two
- *  lines reads as two separate values. Only the variable-length employee
- *  name wraps now; even headers are `nowrap` (see the `<th>` below) so a
- *  column name never splits into "Invoice/No." either. The table's
- *  wrapping `<div>` below still carries `overflowX:"auto"` as a fallback
- *  for the rare phone-width render where these genuinely don't all fit
- *  (see `invoice-email-service.ts`'s matching comment). */
+ *  lines reads as two separate values. The variable-length employee name
+ *  and the headers (see the `<th>` below, no `whiteSpace` override) are
+ *  the table's pressure-release. The table's wrapping `<div>` below still
+ *  carries `overflowX:"auto"` as a fallback for the rare phone-width
+ *  render where these genuinely don't all fit (see
+ *  `invoice-email-service.ts`'s matching comment). */
 function emailCell(align: "left" | "center" | "right" = "left"): CSSProperties {
   return {
     padding: "4px 3px",
@@ -221,7 +223,7 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              fontSize: "8px",
+              fontSize: "9px",
               color: EMAIL_TABLE_TEXT,
             }}
           >
@@ -236,10 +238,9 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
                       border: `1px solid ${EMAIL_TABLE_LINE}`,
                       textAlign: c.align,
                       color: EMAIL_TABLE_TEXT,
-                      fontSize: "7px",
+                      fontSize: "8px",
                       textTransform: "uppercase",
                       letterSpacing: "0.01em",
-                      whiteSpace: "nowrap",
                     }}
                   >
                     {c.label}
