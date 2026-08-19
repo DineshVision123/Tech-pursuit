@@ -93,7 +93,9 @@ const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
 /** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` exactly — widths are
- *  hints, not caps, same as there. */
+ *  enforced via `table-layout:fixed` on the `<table>` below (not just
+ *  claimed by nowrap content), so they hold on a phone-width inbox render
+ *  instead of the table blowing out wider than its container. */
 const EMAIL_TABLE_COLS = [
   { label: "Employee", align: "left", width: "26%" },
   { label: "Invoice No.", align: "left", width: "14%" },
@@ -104,8 +106,17 @@ const EMAIL_TABLE_COLS = [
   { label: "Invoice Amount ($)", align: "right", width: "16%" },
 ] as const;
 
+/** No `white-space:nowrap` here on purpose. It used to be set on every
+ *  value column so a date/invoice-no never split across two lines — but on
+ *  a ~360-400px phone-width inbox render, those six nowrap columns' combined
+ *  intrinsic width added up to more than the container, and mobile Gmail
+ *  just clipped the table past "Invoice Date" instead of scrolling it (no
+ *  columns after that were visible at all). `table-layout:fixed` on the
+ *  `<table>` below pins each column to its `%` width regardless of content;
+ *  `word-break`/`overflow-wrap` here let a value wrap inside that width
+ *  instead of forcing the table wider than its container. */
 function emailCellStyle(align: "left" | "center" | "right" = "left"): string {
-  return `padding:0.5rem 0.45rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
+  return `padding:0.45rem 0.4rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};word-break:break-word;overflow-wrap:break-word;`;
 }
 
 /**
@@ -132,14 +143,14 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:0.5rem 0.45rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.03em;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:0.45rem 0.4rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:0.62rem;text-transform:uppercase;letter-spacing:0.02em;word-break:break-word;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
     .map(
       (li) => `
       <tr>
-        <td style="${emailCellStyle().replace("white-space:nowrap;", "white-space:normal;")}">${escapeHtml(li.product)}</td>
+        <td style="${emailCellStyle()}">${escapeHtml(li.product)}</td>
         <td style="${emailCellStyle()}">${escapeHtml(invoice.invoiceNo)}</td>
         <td style="${emailCellStyle()}">${formatDate(invoice.invoiceDate)}</td>
         <td style="${emailCellStyle()}">${formatDate(invoice.dueDate)}</td>
@@ -182,8 +193,8 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
         0% APR* or as low as ${estimateMonthly(invoice.totals.totalCents)}/mo with Affirm.
       </p>
     </div>
-    <div style="padding:1.3rem 1.75rem 1.45rem;">
-      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:1.3rem 1.75rem 1.45rem;overflow-x:auto;">
+      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:0.72rem;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -296,32 +307,40 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
     .filter((s): s is string => Boolean(s && s.trim()))
     .join(", ");
 
+  // Widths + `table-layout:fixed` (below) pin each column regardless of
+  // content — same fix as `buildInvoiceEmailHtml`'s table: without it, this
+  // table's nowrap "Invoice Amount ($)" column plus five other columns'
+  // intrinsic width added up to more than a phone-width inbox render, and
+  // mobile Gmail clipped the table instead of scrolling it.
+  const reminderCols = [
+    { label: "Employee", align: "left", width: "24%" },
+    { label: "Invoice No.", align: "left", width: "16%" },
+    { label: "Invoice Date", align: "left", width: "14%" },
+    { label: "Due Date", align: "left", width: "14%" },
+    { label: "Days Overdue", align: "center", width: "12%" },
+    { label: "Invoice Amount ($)", align: "right", width: "20%" },
+  ] as const;
+  const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
+    `padding:0.4rem 0.4rem;border:1px solid #000000;text-align:${align};word-break:break-word;overflow-wrap:break-word;`;
+
   const rows = invoice.lineItems
     .map(
       (li) => `
       <tr>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;">${escapeHtml(li.product)}</td>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;">${escapeHtml(invoice.invoiceNo)}</td>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;">${formatDate(invoice.invoiceDate)}</td>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;">${formatDate(invoice.dueDate)}</td>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;text-align:center;">${overdue}</td>
-        <td style="padding:0.5rem 0.6rem;border:1px solid #000000;text-align:right;white-space:nowrap;">${money(li.amountCents)}</td>
+        <td style="${reminderCellStyle()}">${escapeHtml(li.product)}</td>
+        <td style="${reminderCellStyle()}">${escapeHtml(invoice.invoiceNo)}</td>
+        <td style="${reminderCellStyle()}">${formatDate(invoice.invoiceDate)}</td>
+        <td style="${reminderCellStyle()}">${formatDate(invoice.dueDate)}</td>
+        <td style="${reminderCellStyle("center")}">${overdue}</td>
+        <td style="${reminderCellStyle("right")}">${money(li.amountCents)}</td>
       </tr>`,
     )
     .join("");
 
-  const headerCols = [
-    { label: "Employee", align: "left" },
-    { label: "Invoice No.", align: "left" },
-    { label: "Invoice Date", align: "left" },
-    { label: "Due Date", align: "left" },
-    { label: "Days Overdue", align: "center" },
-    { label: "Invoice Amount ($)", align: "right" },
-  ];
-  const headerCells = headerCols
+  const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="padding:0.5rem 0.6rem;border:1px solid #000000;text-align:${c.align};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.03em;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:0.4rem 0.4rem;border:1px solid #000000;text-align:${c.align};font-size:0.62rem;text-transform:uppercase;letter-spacing:0.02em;word-break:break-word;">${c.label}</th>`,
     )
     .join("");
 
@@ -348,10 +367,12 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
       <p style="margin:0 0 0.9rem;">Hi Team,</p>
       <p style="margin:0 0 0.9rem;">I hope you are doing well.</p>
       <p style="margin:0 0 0.9rem;">I am writing to follow up on the payment status of the below invoice:</p>
-      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin:1rem 0;">
-        <thead><tr>${headerCells}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:0.72rem;margin:1rem 0;">
+          <thead><tr>${headerCells}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
       <p style="margin:0.9rem 0;">
         The invoice is now <strong>${overdue} days</strong> past its due date, and we have not yet
         received the payment or an update regarding its status.
