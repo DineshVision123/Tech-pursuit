@@ -129,7 +129,7 @@ const EMAIL_TABLE_COLS = [
  *  (see `invoice-email-service.ts`'s matching comment). */
 function emailCell(align: "left" | "center" | "right" = "left"): CSSProperties {
   return {
-    padding: "6px 5px",
+    padding: "4px 3px",
     border: `1px solid ${EMAIL_TABLE_LINE}`,
     textAlign: align,
     whiteSpace: "nowrap",
@@ -165,7 +165,7 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
         className="rounded-xl"
         style={{
           width: "100%",
-          maxWidth: 620,
+          maxWidth: 560,
           boxSizing: "border-box",
           margin: "0 auto",
           background: "#ffffff",
@@ -173,7 +173,7 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
           overflow: "hidden",
         }}
       >
-        <div style={{ padding: "24px 28px 18px", textAlign: "center" }}>
+        <div style={{ padding: "14px 16px 10px", textAlign: "center" }}>
           {draft.company.logoSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -183,20 +183,20 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
               // Tailwind's preflight makes `img` a block, which text-align
               // can't centre. The real email has no preflight, so its `<img>`
               // stays inline and its `<td align="center">` does the work.
-              style={{ maxHeight: 88, maxWidth: 280, objectFit: "contain", margin: "0 auto" }}
+              style={{ maxHeight: 56, maxWidth: 190, objectFit: "contain", margin: "0 auto" }}
             />
           ) : (
-            <strong style={{ fontSize: "17px" }}>{draft.company.name}</strong>
+            <strong style={{ fontSize: "14px" }}>{draft.company.name}</strong>
           )}
         </div>
         <div
-          style={{ background: "#fbf0d9", padding: "22px 28px 26px", textAlign: "center" }}
+          style={{ background: "#fbf0d9", padding: "14px 16px 16px", textAlign: "center" }}
         >
-          <h3 style={{ margin: "0 0 14px", fontSize: "18px" }}>Your invoice is ready!</h3>
+          <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>Your invoice is ready!</h3>
           <p
             style={{
               margin: 0,
-              fontSize: "11px",
+              fontSize: "9px",
               fontWeight: 700,
               letterSpacing: "0.07em",
               textTransform: "uppercase",
@@ -205,23 +205,23 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
           >
             Balance due
           </p>
-          <p style={{ margin: "6px 0 0", fontSize: "30px", fontWeight: 800 }}>
+          <p style={{ margin: "4px 0 0", fontSize: "20px", fontWeight: 800 }}>
             {money(draft.totalCents)}
           </p>
-          <p style={{ margin: "10px 0 0", fontSize: "12px", color: "#8a7550" }}>
+          <p style={{ margin: "6px 0 0", fontSize: "10px", color: "#8a7550" }}>
             0% APR* or as low as {estimateMonthly(draft.totalCents)}/mo with Affirm.
           </p>
         </div>
         {/* The white gap under the cream band is deliberate, and the email's
-            table cell carries the matching `padding:24px 32px 26px`. These
+            table cell carries the matching `padding:12px 6px 14px`. These
             two numbers only mean anything as a pair — change one and the
             preview starts lying about what lands in the inbox. */}
-        <div style={{ padding: "21px 14px 23px", overflowX: "auto" }}>
+        <div style={{ padding: "12px 6px 14px", overflowX: "auto" }}>
           <table
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              fontSize: "11px",
+              fontSize: "8px",
               color: EMAIL_TABLE_TEXT,
             }}
           >
@@ -232,11 +232,11 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
                     key={c.label}
                     style={{
                       width: c.width,
-                      padding: "6px 5px",
+                      padding: "4px 3px",
                       border: `1px solid ${EMAIL_TABLE_LINE}`,
                       textAlign: c.align,
                       color: EMAIL_TABLE_TEXT,
-                      fontSize: "9px",
+                      fontSize: "7px",
                       textTransform: "uppercase",
                       letterSpacing: "0.01em",
                       whiteSpace: "nowrap",
@@ -268,31 +268,31 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: "0 28px 25px", textAlign: "center" }}>
-          <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.7 }}>
+        <div style={{ padding: "0 16px 14px", textAlign: "center" }}>
+          <p style={{ margin: 0, fontSize: "12px", lineHeight: 1.6 }}>
             Dear {billTo},
             <br />
             {draft.company.name} has sent you invoice <strong>{draft.invoiceNo}</strong> for{" "}
             <strong>{money(draft.totalCents)}</strong>, due {formatDate(draft.dueDate)}. If you
             already paid this invoice or have any questions, let us know!
           </p>
-          <p style={{ margin: "16px 0 0", fontSize: "14px" }}>
+          <p style={{ margin: "10px 0 0", fontSize: "12px" }}>
             Have a great day!
             <br />
             {draft.company.name}
           </p>
         </div>
         {(draft.company.bankName || draft.company.routingNumber || draft.company.accountNumber) && (
-          <div style={{ padding: "0 28px 24px", textAlign: "center" }}>
+          <div style={{ padding: "0 16px 14px", textAlign: "center" }}>
             <p
               style={{
                 margin: 0,
-                fontSize: "12px",
-                lineHeight: 1.7,
+                fontSize: "10px",
+                lineHeight: 1.6,
                 color: "#57503f",
                 background: "#fbf0d9",
-                borderRadius: 8,
-                padding: "14px 18px",
+                borderRadius: 6,
+                padding: "8px 10px",
               }}
             >
               <strong>Payment details</strong>
@@ -317,8 +317,8 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
             </p>
           </div>
         )}
-        <div style={{ background: "#fbf0d9", padding: "18px 28px", textAlign: "center" }}>
-          <p style={{ margin: 0, fontSize: "12px", lineHeight: 1.7, color: "#57503f" }}>
+        <div style={{ background: "#fbf0d9", padding: "12px 16px", textAlign: "center" }}>
+          <p style={{ margin: 0, fontSize: "10px", lineHeight: 1.6, color: "#57503f" }}>
             <strong>{draft.company.name}</strong>
             {companyAddress && (
               <>

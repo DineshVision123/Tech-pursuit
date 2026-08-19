@@ -119,7 +119,7 @@ const EMAIL_TABLE_COLS = [
  *  `overflow-x:auto`, and a smaller font here (see the `<table>` below)
  *  keeps scrolling the rare exception rather than the norm. */
 function emailCellStyle(align: "left" | "center" | "right" = "left"): string {
-  return `padding:6px 5px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
+  return `padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
 }
 
 /**
@@ -146,7 +146,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:6px 5px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:9px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
@@ -167,8 +167,8 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
   const paymentDetails =
     company.bankName || company.routingNumber || company.accountNumber
       ? `
-    <div style="padding:0 28px 24px;text-align:center;">
-      <p style="margin:0;font-size:12px;line-height:1.7;color:#57503f;background:#fbf0d9;border-radius:8px;padding:14px 18px;">
+    <div style="padding:0 16px 14px;text-align:center;">
+      <p style="margin:0;font-size:10px;line-height:1.6;color:#57503f;background:#fbf0d9;border-radius:6px;padding:8px 10px;">
         <strong>Payment details</strong>
         ${company.bankName ? `<br/>Bank: ${escapeHtml(company.bankName)}` : ""}
         ${company.routingNumber ? `<br/>Routing number: ${escapeHtml(company.routingNumber)}` : ""}
@@ -178,45 +178,45 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
       : "";
 
   return `
-  <div style="width:100%;max-width:620px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:12px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:${EMAIL_TABLE_TEXT};">
-    <div style="padding:24px 28px 18px;text-align:center;">
+  <div style="width:100%;max-width:560px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:14px 16px 10px;text-align:center;">
       ${
         logoUrl
-          ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:88px;max-width:280px;" />`
-          : `<strong style="font-size:17px;">${escapeHtml(company.companyName)}</strong>`
+          ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:56px;max-width:190px;" />`
+          : `<strong style="font-size:14px;">${escapeHtml(company.companyName)}</strong>`
       }
     </div>
-    <div style="background:#fbf0d9;padding:22px 28px 26px;text-align:center;">
-      <h3 style="margin:0 0 14px;font-size:18px;">Your invoice is ready!</h3>
-      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#8a7550;">
+    <div style="background:#fbf0d9;padding:14px 16px 16px;text-align:center;">
+      <h3 style="margin:0 0 8px;font-size:15px;">Your invoice is ready!</h3>
+      <p style="margin:0;font-size:9px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#8a7550;">
         Balance due
       </p>
-      <p style="margin:6px 0 0;font-size:30px;font-weight:800;">${money(invoice.totals.totalCents)}</p>
-      <p style="margin:10px 0 0;font-size:12px;color:#8a7550;">
+      <p style="margin:4px 0 0;font-size:20px;font-weight:800;">${money(invoice.totals.totalCents)}</p>
+      <p style="margin:6px 0 0;font-size:10px;color:#8a7550;">
         0% APR* or as low as ${estimateMonthly(invoice.totals.totalCents)}/mo with Affirm.
       </p>
     </div>
-    <div style="padding:21px 14px 23px;overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:11px;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:12px 6px 14px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:8px;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div style="padding:0 28px 25px;text-align:center;">
-      <p style="margin:0;font-size:14px;line-height:1.7;">
+    <div style="padding:0 16px 14px;text-align:center;">
+      <p style="margin:0;font-size:12px;line-height:1.6;">
         Dear ${escapeHtml(billTo)},<br/>
         ${escapeHtml(company.companyName)} has sent you invoice <strong>${escapeHtml(invoice.invoiceNo)}</strong>
         for <strong>${money(invoice.totals.totalCents)}</strong>, due ${formatDate(invoice.dueDate)}.
         If you already paid this invoice or have any questions, let us know!
       </p>
-      <p style="margin:16px 0 0;font-size:14px;">
+      <p style="margin:10px 0 0;font-size:12px;">
         Have a great day!<br/>
         ${escapeHtml(company.companyName)}
       </p>
     </div>
     ${paymentDetails}
-    <div style="background:#fbf0d9;padding:18px 28px;text-align:center;">
-      <p style="margin:0;font-size:12px;line-height:1.7;color:#57503f;">
+    <div style="background:#fbf0d9;padding:12px 16px;text-align:center;">
+      <p style="margin:0;font-size:10px;line-height:1.6;color:#57503f;">
         <strong>${escapeHtml(company.companyName)}</strong>
         ${companyAddress ? `<br/>${escapeHtml(companyAddress)}` : ""}
       </p>
@@ -326,7 +326,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
     { label: "Amount ($)", align: "right", width: "14%" },
   ] as const;
   const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
-    `padding:6px 6px;border:1px solid #000000;text-align:${align};`;
+    `padding:4px 3px;border:1px solid #000000;text-align:${align};`;
 
   const rows = invoice.lineItems
     .map(
@@ -345,7 +345,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="width:${c.width};padding:6px 6px;border:1px solid #000000;text-align:${c.align};font-size:9px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:4px 3px;border:1px solid #000000;text-align:${c.align};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
     )
     .join("");
 
@@ -353,41 +353,41 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const logoUrl = company.logoUrl ? `${siteUrl()}${company.logoUrl}` : null;
 
   return `
-  <div style="width:100%;max-width:620px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:12px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111827;">
-    <div style="padding:24px 28px 16px;text-align:center;">
+  <div style="width:100%;max-width:560px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+    <div style="padding:14px 16px 8px;text-align:center;">
       ${
         logoUrl
-          ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:80px;max-width:260px;" />`
-          : `<strong style="font-size:17px;">${escapeHtml(company.companyName)}</strong>`
+          ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:52px;max-width:180px;" />`
+          : `<strong style="font-size:14px;">${escapeHtml(company.companyName)}</strong>`
       }
     </div>
-    <div style="background:#fbf0d9;padding:22px 28px;">
-      <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0d9488;">
+    <div style="background:#fbf0d9;padding:14px 16px;">
+      <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0d9488;">
         Payment reminder
       </p>
-      <h3 style="margin:0;font-size:22px;">Follow-up #${followupNumber}</h3>
-      <p style="margin:4px 0 0;font-size:16px;color:#57503f;">on Pending Payment</p>
+      <h3 style="margin:0;font-size:16px;">Follow-up #${followupNumber}</h3>
+      <p style="margin:3px 0 0;font-size:12px;color:#57503f;">on Pending Payment</p>
     </div>
-    <div style="padding:24px 28px;">
-      <p style="margin:0 0 14px;">Hi Team,</p>
-      <p style="margin:0 0 14px;">I hope you are doing well.</p>
-      <p style="margin:0 0 14px;">I am writing to follow up on the payment status of the below invoice:</p>
-      <div style="overflow-x:auto;margin:0 -14px;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;margin:16px 0;">
+    <div style="padding:14px 16px;font-size:12px;line-height:1.6;">
+      <p style="margin:0 0 10px;">Hi Team,</p>
+      <p style="margin:0 0 10px;">I hope you are doing well.</p>
+      <p style="margin:0 0 10px;">I am writing to follow up on the payment status of the below invoice:</p>
+      <div style="overflow-x:auto;margin:0 -10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:8px;margin:10px 0;">
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p style="margin:14px 0;">
+      <p style="margin:10px 0;">
         The invoice is now <strong>${overdue} days</strong> past its due date, and we have not yet
         received the payment or an update regarding its status.
       </p>
-      <p style="margin:14px 0;">
+      <p style="margin:10px 0;">
         Could you please provide us with an update on this payment? If the payment has already been
         processed, kindly share the remittance advice or payment confirmation for our records.
       </p>
-      <p style="margin:14px 0;">Your prompt response would be greatly appreciated.</p>
-      <p style="margin:24px 0 0;">
+      <p style="margin:10px 0;">Your prompt response would be greatly appreciated.</p>
+      <p style="margin:16px 0 0;">
         Regards<br/>
         <strong>${escapeHtml(company.companyName)}</strong><br/>
         ${fromLine ? `<a href="mailto:${escapeHtml(fromLine)}" style="color:#1d5bd6;">${escapeHtml(fromLine)}</a><br/>` : ""}
