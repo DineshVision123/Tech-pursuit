@@ -92,36 +92,37 @@ function estimateMonthly(totalCents: number): string {
 const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
-/** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` exactly — widths are
- *  hints for the table's default auto layout, not a hard cap: each nowrap
- *  value column still claims exactly the width its content needs (same
- *  approach a working reference invoice email uses), so "Aug 19, 2026"
- *  renders on one line instead of getting forced to wrap or fracture.
- *  Headers are the pressure-release instead: they're allowed to wrap at
- *  a space (see the `<th>` below, deliberately with no `white-space`
- *  override) so "Invoice Amount ($)" becomes two natural lines —
- *  "Invoice" / "Amount ($)" — rather than needing its own full-width
- *  line or a shortened label. */
+/** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` exactly. Widths here
+ *  are AUTHORITATIVE, not hints — the `<table>` below uses
+ *  `table-layout:fixed`, which was the real gap through several earlier
+ *  passes: `table-layout:auto` (the default) treats `width:100%` as a
+ *  target it will happily exceed once nowrap cells demand more room, so
+ *  no amount of column tuning under `auto` layout could actually stop
+ *  the row from growing past a phone-width inbox render — `Invoice
+ *  Amount ($)` kept getting pushed off no matter how small the text got.
+ *  `fixed` makes these percentages a real ceiling. Each one is sized off
+ *  the actual character count of its nowrap value at this font (Invoice
+ *  No./dates need more room than their headers; Amount is the reverse —
+ *  its header is the long part, so it wraps to "Invoice"/"Amount ($)"
+ *  and needs less). */
 const EMAIL_TABLE_COLS = [
-  { label: "Employee", align: "left", width: "24%" },
-  { label: "Invoice No.", align: "left", width: "15%" },
-  { label: "Invoice Date", align: "left", width: "14%" },
-  { label: "Due Date", align: "left", width: "14%" },
-  { label: "Qty", align: "center", width: "8%" },
-  { label: "Rate", align: "right", width: "11%" },
+  { label: "Employee", align: "left", width: "14%" },
+  { label: "Invoice No.", align: "left", width: "20%" },
+  { label: "Invoice Date", align: "left", width: "18%" },
+  { label: "Due Date", align: "left", width: "18%" },
+  { label: "Qty", align: "center", width: "6%" },
+  { label: "Rate", align: "right", width: "10%" },
   { label: "Invoice Amount ($)", align: "right", width: "14%" },
 ] as const;
 
 /** Fixed-format values stay `nowrap` — a date or invoice no. split across
  *  two lines reads as two separate values. This alone isn't what overflowed
- *  on mobile; the real bug was the wrapping `<div>` around the table having
- *  no `overflow-x`, so when the six nowrap columns' combined width did
- *  exceed a phone-width inbox render, mobile Gmail clipped everything past
- *  "Invoice Date" instead of scrolling it. That div now gets
- *  `overflow-x:auto`, and a smaller font here (see the `<table>` below)
- *  keeps scrolling the rare exception rather than the norm. */
+ *  on mobile; the real bug was `table-layout:auto` never actually capping
+ *  the row's width (see the comment on `EMAIL_TABLE_COLS`). The wrapping
+ *  `<div>` around the table still gets `overflow-x:auto` as a last-resort
+ *  fallback, not the primary mechanism.  */
 function emailCellStyle(align: "left" | "center" | "right" = "left"): string {
-  return `padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
+  return `padding:3px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;overflow:hidden;vertical-align:top;`;
 }
 
 /**
@@ -148,7 +149,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:4px 3px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:8px;text-transform:uppercase;letter-spacing:0.01em;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:3px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;word-wrap:break-word;vertical-align:top;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
@@ -169,7 +170,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
   const paymentDetails =
     company.bankName || company.routingNumber || company.accountNumber
       ? `
-    <div style="padding:0 16px 14px;text-align:center;">
+    <div style="padding:0 12px 12px;text-align:center;">
       <p style="margin:0;font-size:10px;line-height:1.6;color:#57503f;background:#fbf0d9;border-radius:6px;padding:8px 10px;">
         <strong>Payment details</strong>
         ${company.bankName ? `<br/>Bank: ${escapeHtml(company.bankName)}` : ""}
@@ -180,15 +181,15 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
       : "";
 
   return `
-  <div style="width:100%;max-width:560px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:${EMAIL_TABLE_TEXT};">
-    <div style="padding:14px 16px 10px;text-align:center;">
+  <div style="width:100%;max-width:620px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:14px 12px 10px;text-align:center;">
       ${
         logoUrl
           ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:56px;max-width:190px;" />`
           : `<strong style="font-size:14px;">${escapeHtml(company.companyName)}</strong>`
       }
     </div>
-    <div style="background:#fbf0d9;padding:14px 16px 16px;text-align:center;">
+    <div style="background:#fbf0d9;padding:14px 12px 16px;text-align:center;">
       <h3 style="margin:0 0 8px;font-size:15px;">Your invoice is ready!</h3>
       <p style="margin:0;font-size:9px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#8a7550;">
         Balance due
@@ -198,13 +199,13 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
         0% APR* or as low as ${estimateMonthly(invoice.totals.totalCents)}/mo with Affirm.
       </p>
     </div>
-    <div style="padding:12px 6px 14px;overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:9px;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:12px 4px 14px;overflow-x:auto;">
+      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9px;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div style="padding:0 16px 14px;text-align:center;">
+    <div style="padding:0 12px 12px;text-align:center;">
       <p style="margin:0;font-size:12px;line-height:1.6;">
         Dear ${escapeHtml(billTo)},<br/>
         ${escapeHtml(company.companyName)} has sent you invoice <strong>${escapeHtml(invoice.invoiceNo)}</strong>
@@ -217,7 +218,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
       </p>
     </div>
     ${paymentDetails}
-    <div style="background:#fbf0d9;padding:12px 16px;text-align:center;">
+    <div style="background:#fbf0d9;padding:10px 12px;text-align:center;">
       <p style="margin:0;font-size:10px;line-height:1.6;color:#57503f;">
         <strong>${escapeHtml(company.companyName)}</strong>
         ${companyAddress ? `<br/>${escapeHtml(companyAddress)}` : ""}
@@ -312,24 +313,24 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
     .filter((s): s is string => Boolean(s && s.trim()))
     .join(", ");
 
-  // Widths are hints for the table's default auto layout (same approach as
-  // `buildInvoiceEmailHtml`'s table) — the Amount column stays `nowrap` so
-  // "$5,400.00" renders on one line; the wrapping `<div>` below gets
-  // `overflow-x:auto` so the rare phone-width render that's still too wide
-  // scrolls instead of clipping. Headers have no `white-space` override
-  // (same as `buildInvoiceEmailHtml`), so "Invoice Amount ($)" wraps at
-  // its own space into "Invoice" / "Amount ($)" instead of needing a
-  // shortened label.
+  // Widths here are AUTHORITATIVE, not hints — see the matching comment on
+  // `EMAIL_TABLE_COLS` in `buildInvoiceEmailHtml`: `table-layout:auto` (the
+  // default) never actually caps the row's width once nowrap cells demand
+  // more room, which is why Amount kept getting pushed off no matter how
+  // small the text got. `table-layout:fixed` on the `<table>` below makes
+  // these percentages a real ceiling, each sized off this column's actual
+  // nowrap character count at this font. The wrapping `<div>` still gets
+  // `overflow-x:auto` as a last-resort fallback, not the primary mechanism.
   const reminderCols = [
-    { label: "Employee", align: "left", width: "22%" },
-    { label: "Invoice No.", align: "left", width: "17%" },
-    { label: "Invoice Date", align: "left", width: "16%" },
-    { label: "Due Date", align: "left", width: "16%" },
-    { label: "Days Overdue", align: "center", width: "15%" },
-    { label: "Invoice Amount ($)", align: "right", width: "14%" },
+    { label: "Employee", align: "left", width: "15%" },
+    { label: "Invoice No.", align: "left", width: "21%" },
+    { label: "Invoice Date", align: "left", width: "19%" },
+    { label: "Due Date", align: "left", width: "19%" },
+    { label: "Days Overdue", align: "center", width: "11%" },
+    { label: "Invoice Amount ($)", align: "right", width: "15%" },
   ] as const;
   const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
-    `padding:4px 3px;border:1px solid #000000;text-align:${align};`;
+    `padding:3px 2px;border:1px solid #000000;text-align:${align};overflow:hidden;vertical-align:top;`;
 
   const rows = invoice.lineItems
     .map(
@@ -348,7 +349,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="width:${c.width};padding:4px 3px;border:1px solid #000000;text-align:${c.align};font-size:8px;text-transform:uppercase;letter-spacing:0.01em;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:3px 2px;border:1px solid #000000;text-align:${c.align};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;word-wrap:break-word;vertical-align:top;">${c.label}</th>`,
     )
     .join("");
 
@@ -356,27 +357,27 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const logoUrl = company.logoUrl ? `${siteUrl()}${company.logoUrl}` : null;
 
   return `
-  <div style="width:100%;max-width:560px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111827;">
-    <div style="padding:14px 16px 8px;text-align:center;">
+  <div style="width:100%;max-width:620px;margin:0 auto;box-sizing:border-box;background:#ffffff;border:1px solid #ece4d6;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+    <div style="padding:14px 12px 8px;text-align:center;">
       ${
         logoUrl
           ? `<img src="${logoUrl}" alt="${escapeHtml(company.companyName)}" style="max-height:52px;max-width:180px;" />`
           : `<strong style="font-size:14px;">${escapeHtml(company.companyName)}</strong>`
       }
     </div>
-    <div style="background:#fbf0d9;padding:14px 16px;">
+    <div style="background:#fbf0d9;padding:14px 12px;">
       <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0d9488;">
         Payment reminder
       </p>
       <h3 style="margin:0;font-size:16px;">Follow-up #${followupNumber}</h3>
       <p style="margin:3px 0 0;font-size:12px;color:#57503f;">on Pending Payment</p>
     </div>
-    <div style="padding:14px 16px;font-size:12px;line-height:1.6;">
+    <div style="padding:14px 12px;font-size:12px;line-height:1.6;">
       <p style="margin:0 0 10px;">Hi Team,</p>
       <p style="margin:0 0 10px;">I hope you are doing well.</p>
       <p style="margin:0 0 10px;">I am writing to follow up on the payment status of the below invoice:</p>
-      <div style="overflow-x:auto;margin:0 -10px;">
-        <table style="width:100%;border-collapse:collapse;font-size:9px;margin:10px 0;">
+      <div style="overflow-x:auto;margin:0 -12px;">
+        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9px;margin:10px 0;">
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
