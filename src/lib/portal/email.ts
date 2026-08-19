@@ -93,30 +93,33 @@ const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
 /** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` exactly — widths are
- *  enforced via `table-layout:fixed` on the `<table>` below (not just
- *  claimed by nowrap content), so they hold on a phone-width inbox render
- *  instead of the table blowing out wider than its container. */
+ *  hints for the table's default auto layout, not a hard cap: each nowrap
+ *  value column still claims exactly the width its content needs (same
+ *  approach a working reference invoice email uses), so "Aug 19, 2026"
+ *  renders on one line instead of getting forced to wrap or fracture.
+ *  "Amount ($)" (not "Invoice Amount ($)") is deliberate — the header row
+ *  is `nowrap` too now (see below), and this was the one label wide enough
+ *  to push the whole row past a phone-width inbox render on its own. */
 const EMAIL_TABLE_COLS = [
-  { label: "Employee", align: "left", width: "26%" },
-  { label: "Invoice No.", align: "left", width: "14%" },
-  { label: "Invoice Date", align: "left", width: "13%" },
-  { label: "Due Date", align: "left", width: "13%" },
-  { label: "Qty", align: "center", width: "7%" },
+  { label: "Employee", align: "left", width: "24%" },
+  { label: "Invoice No.", align: "left", width: "15%" },
+  { label: "Invoice Date", align: "left", width: "14%" },
+  { label: "Due Date", align: "left", width: "14%" },
+  { label: "Qty", align: "center", width: "8%" },
   { label: "Rate", align: "right", width: "11%" },
-  { label: "Invoice Amount ($)", align: "right", width: "16%" },
+  { label: "Amount ($)", align: "right", width: "14%" },
 ] as const;
 
-/** No `white-space:nowrap` here on purpose. It used to be set on every
- *  value column so a date/invoice-no never split across two lines — but on
- *  a ~360-400px phone-width inbox render, those six nowrap columns' combined
- *  intrinsic width added up to more than the container, and mobile Gmail
- *  just clipped the table past "Invoice Date" instead of scrolling it (no
- *  columns after that were visible at all). `table-layout:fixed` on the
- *  `<table>` below pins each column to its `%` width regardless of content;
- *  `word-break`/`overflow-wrap` here let a value wrap inside that width
- *  instead of forcing the table wider than its container. */
+/** Fixed-format values stay `nowrap` — a date or invoice no. split across
+ *  two lines reads as two separate values. This alone isn't what overflowed
+ *  on mobile; the real bug was the wrapping `<div>` around the table having
+ *  no `overflow-x`, so when the six nowrap columns' combined width did
+ *  exceed a phone-width inbox render, mobile Gmail clipped everything past
+ *  "Invoice Date" instead of scrolling it. That div now gets
+ *  `overflow-x:auto`, and a smaller font here (see the `<table>` below)
+ *  keeps scrolling the rare exception rather than the norm. */
 function emailCellStyle(align: "left" | "center" | "right" = "left"): string {
-  return `padding:0.45rem 0.4rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};word-break:break-word;overflow-wrap:break-word;`;
+  return `padding:0.4rem 0.3rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
 }
 
 /**
@@ -143,14 +146,14 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:0.45rem 0.4rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:0.62rem;text-transform:uppercase;letter-spacing:0.02em;word-break:break-word;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:0.35rem 0.3rem;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:0.56rem;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
     .map(
       (li) => `
       <tr>
-        <td style="${emailCellStyle()}">${escapeHtml(li.product)}</td>
+        <td style="${emailCellStyle().replace("white-space:nowrap;", "white-space:normal;")}">${escapeHtml(li.product)}</td>
         <td style="${emailCellStyle()}">${escapeHtml(invoice.invoiceNo)}</td>
         <td style="${emailCellStyle()}">${formatDate(invoice.invoiceDate)}</td>
         <td style="${emailCellStyle()}">${formatDate(invoice.dueDate)}</td>
@@ -193,8 +196,8 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
         0% APR* or as low as ${estimateMonthly(invoice.totals.totalCents)}/mo with Affirm.
       </p>
     </div>
-    <div style="padding:1.3rem 1.75rem 1.45rem;overflow-x:auto;">
-      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:0.72rem;color:${EMAIL_TABLE_TEXT};">
+    <div style="padding:1.3rem 0.9rem 1.45rem;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.7rem;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -307,32 +310,34 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
     .filter((s): s is string => Boolean(s && s.trim()))
     .join(", ");
 
-  // Widths + `table-layout:fixed` (below) pin each column regardless of
-  // content — same fix as `buildInvoiceEmailHtml`'s table: without it, this
-  // table's nowrap "Invoice Amount ($)" column plus five other columns'
-  // intrinsic width added up to more than a phone-width inbox render, and
-  // mobile Gmail clipped the table instead of scrolling it.
+  // Widths are hints for the table's default auto layout (same approach as
+  // `buildInvoiceEmailHtml`'s table) — the Amount column stays `nowrap` so
+  // "$5,400.00" renders on one line; the wrapping `<div>` below gets
+  // `overflow-x:auto` so the rare phone-width render that's still too wide
+  // scrolls instead of clipping. "Amount ($)" (not "Invoice Amount ($)")
+  // for the same reason as `buildInvoiceEmailHtml` — headers are `nowrap`
+  // too, and the longer label was the widest thing in the row.
   const reminderCols = [
-    { label: "Employee", align: "left", width: "24%" },
-    { label: "Invoice No.", align: "left", width: "16%" },
-    { label: "Invoice Date", align: "left", width: "14%" },
-    { label: "Due Date", align: "left", width: "14%" },
-    { label: "Days Overdue", align: "center", width: "12%" },
-    { label: "Invoice Amount ($)", align: "right", width: "20%" },
+    { label: "Employee", align: "left", width: "22%" },
+    { label: "Invoice No.", align: "left", width: "17%" },
+    { label: "Invoice Date", align: "left", width: "16%" },
+    { label: "Due Date", align: "left", width: "16%" },
+    { label: "Days Overdue", align: "center", width: "15%" },
+    { label: "Amount ($)", align: "right", width: "14%" },
   ] as const;
   const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
-    `padding:0.4rem 0.4rem;border:1px solid #000000;text-align:${align};word-break:break-word;overflow-wrap:break-word;`;
+    `padding:0.4rem 0.35rem;border:1px solid #000000;text-align:${align};`;
 
   const rows = invoice.lineItems
     .map(
       (li) => `
       <tr>
         <td style="${reminderCellStyle()}">${escapeHtml(li.product)}</td>
-        <td style="${reminderCellStyle()}">${escapeHtml(invoice.invoiceNo)}</td>
-        <td style="${reminderCellStyle()}">${formatDate(invoice.invoiceDate)}</td>
-        <td style="${reminderCellStyle()}">${formatDate(invoice.dueDate)}</td>
-        <td style="${reminderCellStyle("center")}">${overdue}</td>
-        <td style="${reminderCellStyle("right")}">${money(li.amountCents)}</td>
+        <td style="${reminderCellStyle()}white-space:nowrap;">${escapeHtml(invoice.invoiceNo)}</td>
+        <td style="${reminderCellStyle()}white-space:nowrap;">${formatDate(invoice.invoiceDate)}</td>
+        <td style="${reminderCellStyle()}white-space:nowrap;">${formatDate(invoice.dueDate)}</td>
+        <td style="${reminderCellStyle("center")}white-space:nowrap;">${overdue}</td>
+        <td style="${reminderCellStyle("right")}white-space:nowrap;">${money(li.amountCents)}</td>
       </tr>`,
     )
     .join("");
@@ -340,7 +345,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="width:${c.width};padding:0.4rem 0.4rem;border:1px solid #000000;text-align:${c.align};font-size:0.62rem;text-transform:uppercase;letter-spacing:0.02em;word-break:break-word;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:0.35rem 0.35rem;border:1px solid #000000;text-align:${c.align};font-size:0.58rem;text-transform:uppercase;letter-spacing:0.01em;white-space:nowrap;">${c.label}</th>`,
     )
     .join("");
 
@@ -367,8 +372,8 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
       <p style="margin:0 0 0.9rem;">Hi Team,</p>
       <p style="margin:0 0 0.9rem;">I hope you are doing well.</p>
       <p style="margin:0 0 0.9rem;">I am writing to follow up on the payment status of the below invoice:</p>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:0.72rem;margin:1rem 0;">
+      <div style="overflow-x:auto;margin:0 -0.85rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.72rem;margin:1rem 0;">
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>

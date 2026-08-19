@@ -103,33 +103,36 @@ function estimateMonthly(totalCents: number): string {
 const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
-/** Widths mirror `invoice-email-service.ts`'s `TABLE_COLS` — enforced via
- *  `table-layout:fixed` on the `<table>` below (not just claimed by nowrap
- *  content), so they hold on a phone-width inbox render instead of the
- *  table blowing out wider than its container. */
+/** Widths mirror `invoice-email-service.ts`'s `TABLE_COLS` — hints for the
+ *  table's default auto layout, not a hard cap: each nowrap value column
+ *  still claims exactly the width its content needs, matching a working
+ *  reference invoice email's look (dates/amounts on one line each).
+ *  "Amount ($)" (not "Invoice Amount ($)") is deliberate — the header row
+ *  is `nowrap` too now, and this was the one label wide enough to push the
+ *  whole row past a phone-width inbox render on its own. */
 const EMAIL_TABLE_COLS = [
-  { label: "Employee", align: "left", width: "26%" },
-  { label: "Invoice No.", align: "left", width: "14%" },
-  { label: "Invoice Date", align: "left", width: "13%" },
-  { label: "Due Date", align: "left", width: "13%" },
-  { label: "Qty", align: "center", width: "7%" },
+  { label: "Employee", align: "left", width: "24%" },
+  { label: "Invoice No.", align: "left", width: "15%" },
+  { label: "Invoice Date", align: "left", width: "14%" },
+  { label: "Due Date", align: "left", width: "14%" },
+  { label: "Qty", align: "center", width: "8%" },
   { label: "Rate", align: "right", width: "11%" },
-  { label: "Invoice Amount ($)", align: "right", width: "16%" },
+  { label: "Amount ($)", align: "right", width: "14%" },
 ] as const;
 
-/** No `whiteSpace:"nowrap"` here on purpose — see `invoice-email-service.ts`'s
- *  matching comment on why that used to blow the table out wider than a
- *  phone-width inbox render (mobile Gmail clipped everything past "Invoice
- *  Date" instead of scrolling it). `table-layout:fixed` on the `<table>`
- *  below pins each column to its `%` width; this wraps a long value inside
- *  that width instead of forcing the table wider than its container. */
+/** Fixed-format values never wrap — an invoice no. or date split across two
+ *  lines reads as two separate values. Only the variable-length employee
+ *  name wraps now; even headers are `nowrap` (see the `<th>` below) so a
+ *  column name never splits into "Invoice/No." either. The table's
+ *  wrapping `<div>` below still carries `overflowX:"auto"` as a fallback
+ *  for the rare phone-width render where these genuinely don't all fit
+ *  (see `invoice-email-service.ts`'s matching comment). */
 function emailCell(align: "left" | "center" | "right" = "left"): CSSProperties {
   return {
-    padding: "0.45rem 0.4rem",
+    padding: "0.4rem 0.3rem",
     border: `1px solid ${EMAIL_TABLE_LINE}`,
     textAlign: align,
-    wordBreak: "break-word",
-    overflowWrap: "break-word",
+    whiteSpace: "nowrap",
   };
 }
 
@@ -211,13 +214,12 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
             table cell carries the matching `padding:24px 32px 26px`. These
             two numbers only mean anything as a pair — change one and the
             preview starts lying about what lands in the inbox. */}
-        <div style={{ padding: "1.3rem 1.75rem 1.45rem", overflowX: "auto" }}>
+        <div style={{ padding: "1.3rem 0.9rem 1.45rem", overflowX: "auto" }}>
           <table
             style={{
               width: "100%",
-              tableLayout: "fixed",
               borderCollapse: "collapse",
-              fontSize: "0.72rem",
+              fontSize: "0.7rem",
               color: EMAIL_TABLE_TEXT,
             }}
           >
@@ -228,14 +230,14 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
                     key={c.label}
                     style={{
                       width: c.width,
-                      padding: "0.45rem 0.4rem",
+                      padding: "0.35rem 0.3rem",
                       border: `1px solid ${EMAIL_TABLE_LINE}`,
                       textAlign: c.align,
                       color: EMAIL_TABLE_TEXT,
-                      fontSize: "0.62rem",
+                      fontSize: "0.56rem",
                       textTransform: "uppercase",
-                      letterSpacing: "0.02em",
-                      wordBreak: "break-word",
+                      letterSpacing: "0.01em",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {c.label}
@@ -246,7 +248,7 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
             <tbody>
               {draft.lineItems.map((li, i) => (
                 <tr key={i}>
-                  <td style={emailCell()}>{li.product}</td>
+                  <td style={{ ...emailCell(), whiteSpace: "normal" }}>{li.product}</td>
                   <td style={emailCell()}>{draft.invoiceNo}</td>
                   <td style={emailCell()}>{formatDate(draft.invoiceDate)}</td>
                   <td style={emailCell()}>{formatDate(draft.dueDate)}</td>
