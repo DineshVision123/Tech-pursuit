@@ -103,44 +103,42 @@ function estimateMonthly(totalCents: number): string {
 const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
-/** Widths mirror `invoice-email-service.ts`'s `TABLE_COLS`. They're
- *  AUTHORITATIVE, not hints — the `<table>` below uses
- *  `tableLayout:"fixed"`, which was the real gap through several earlier
- *  passes: default `table-layout:auto` treats `width:"100%"` as a target
- *  it will happily exceed once nowrap cells demand more room, so no
- *  amount of column tuning under `auto` layout could actually stop the
- *  row from growing past a phone-width inbox render — Invoice Amount ($)
- *  kept getting pushed off no matter how small the text got. `fixed`
- *  makes these percentages a real ceiling, each sized off the actual
- *  character count of its nowrap value at this font (Invoice No./dates
- *  need more room than their headers; Amount is the reverse — its header
- *  is the long part, so it wraps to "Invoice"/"Amount ($)" and needs
- *  less). */
+/** Widths mirror `invoice-email-service.ts`'s `TABLE_COLS` — hints for the
+ *  table's default auto layout, not a hard cap. `tableLayout:"fixed"` was
+ *  tried and reverted: it made these percentages an enforced ceiling,
+ *  which sounds safer, but a fixed column that's a hair too narrow for
+ *  its real-world rendered content doesn't just wrap — with
+ *  `overflow:"hidden"` it silently truncates the *value itself* ("Aug
+ *  19, 202" missing its final digit), and header words that don't fit
+ *  break mid-word ("EMPLOY"/"EE"). Both are worse than the original bug
+ *  (a column pushed off-screen), because they show something that looks
+ *  like real data but isn't. `nextInvoiceNumber()` dropping the year
+ *  (`INV-0001` instead of `INV-2026-0003`) is what actually bought back
+ *  the room Invoice Amount ($) needed — not a layout trick. */
 const EMAIL_TABLE_COLS = [
-  { label: "Employee", align: "left", width: "14%" },
-  { label: "Invoice No.", align: "left", width: "20%" },
-  { label: "Invoice Date", align: "left", width: "18%" },
-  { label: "Due Date", align: "left", width: "18%" },
-  { label: "Qty", align: "center", width: "6%" },
-  { label: "Rate", align: "right", width: "10%" },
-  { label: "Invoice Amount ($)", align: "right", width: "14%" },
+  { label: "Employee", align: "left", width: "20%" },
+  { label: "Invoice No.", align: "left", width: "13%" },
+  { label: "Invoice Date", align: "left", width: "16%" },
+  { label: "Due Date", align: "left", width: "16%" },
+  { label: "Qty", align: "center", width: "8%" },
+  { label: "Rate", align: "right", width: "12%" },
+  { label: "Invoice Amount ($)", align: "right", width: "15%" },
 ] as const;
 
 /** Fixed-format values never wrap — an invoice no. or date split across two
- *  lines reads as two separate values. This alone isn't what overflowed;
- *  the real bug was `table-layout:auto` never actually capping the row's
- *  width (see the comment on `EMAIL_TABLE_COLS`). The table's wrapping
- *  `<div>` below still carries `overflowX:"auto"` as a last-resort
- *  fallback, not the primary mechanism, and `overflow:"hidden"` here
- *  clips a value to its own cell instead of spilling into the next one
- *  on the rare row that's still a hair too wide. */
+ *  lines reads as two separate values. Only the variable-length employee
+ *  name and the headers (no `whiteSpace` override below) wrap; that's the
+ *  table's pressure-release instead of a layout that can silently cut a
+ *  value short (see the comment on `EMAIL_TABLE_COLS`). The table's
+ *  wrapping `<div>` below still carries `overflowX:"auto"` as a
+ *  last-resort fallback for the rare render that genuinely doesn't fit —
+ *  scrolling a value is always better than showing a wrong one. */
 function emailCell(align: "left" | "center" | "right" = "left"): CSSProperties {
   return {
-    padding: "3px 2px",
+    padding: "2px 2px",
     border: `1px solid ${EMAIL_TABLE_LINE}`,
     textAlign: align,
     whiteSpace: "nowrap",
-    overflow: "hidden",
     verticalAlign: "top",
   };
 }
@@ -229,9 +227,8 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
           <table
             style={{
               width: "100%",
-              tableLayout: "fixed",
               borderCollapse: "collapse",
-              fontSize: "9px",
+              fontSize: "8px",
               color: EMAIL_TABLE_TEXT,
             }}
           >
@@ -242,14 +239,13 @@ function EmailPreview({ draft }: { readonly draft: InvoiceDraft }) {
                     key={c.label}
                     style={{
                       width: c.width,
-                      padding: "3px 2px",
+                      padding: "2px 2px",
                       border: `1px solid ${EMAIL_TABLE_LINE}`,
                       textAlign: c.align,
                       color: EMAIL_TABLE_TEXT,
                       fontSize: "7px",
                       textTransform: "uppercase",
                       letterSpacing: "0.01em",
-                      wordWrap: "break-word",
                       verticalAlign: "top",
                     }}
                   >

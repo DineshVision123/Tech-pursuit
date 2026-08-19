@@ -92,37 +92,43 @@ function estimateMonthly(totalCents: number): string {
 const EMAIL_TABLE_LINE = "#000000";
 const EMAIL_TABLE_TEXT = "#111827";
 
-/** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` exactly. Widths here
- *  are AUTHORITATIVE, not hints — the `<table>` below uses
- *  `table-layout:fixed`, which was the real gap through several earlier
- *  passes: `table-layout:auto` (the default) treats `width:100%` as a
- *  target it will happily exceed once nowrap cells demand more room, so
- *  no amount of column tuning under `auto` layout could actually stop
- *  the row from growing past a phone-width inbox render — `Invoice
- *  Amount ($)` kept getting pushed off no matter how small the text got.
- *  `fixed` makes these percentages a real ceiling. Each one is sized off
- *  the actual character count of its nowrap value at this font (Invoice
- *  No./dates need more room than their headers; Amount is the reverse —
- *  its header is the long part, so it wraps to "Invoice"/"Amount ($)"
- *  and needs less). */
+/** Mirrors `InvoicePreview.tsx`'s `EMAIL_TABLE_COLS` — widths are hints
+ *  for the table's default auto layout, not a hard cap. `table-layout:
+ *  fixed` was tried and reverted: it made these percentages an enforced
+ *  ceiling, which sounds safer, but a fixed column that's a hair too
+ *  narrow for its real-world rendered content doesn't just wrap — with
+ *  `overflow:hidden` it silently truncates the *value itself* ("Aug 19,
+ *  202" missing its final digit, an invoice no. missing its last two
+ *  digits), and header words that don't fit break mid-word ("EMPLOY"/
+ *  "EE"). Both are worse than the original bug (a column getting
+ *  pushed off-screen), because they show something that looks like
+ *  real data but isn't. Auto layout can't silently corrupt a value like
+ *  that — a column either gets the width its nowrap content needs, or
+ *  (for headers only, which are allowed to wrap) it wraps cleanly at a
+ *  space. `nextInvoiceNumber()` dropping the year (`INV-0001` instead of
+ *  `INV-2026-0003`) is what actually bought back the room Invoice
+ *  Amount ($) needed — not a layout trick. */
 const EMAIL_TABLE_COLS = [
-  { label: "Employee", align: "left", width: "14%" },
-  { label: "Invoice No.", align: "left", width: "20%" },
-  { label: "Invoice Date", align: "left", width: "18%" },
-  { label: "Due Date", align: "left", width: "18%" },
-  { label: "Qty", align: "center", width: "6%" },
-  { label: "Rate", align: "right", width: "10%" },
-  { label: "Invoice Amount ($)", align: "right", width: "14%" },
+  { label: "Employee", align: "left", width: "20%" },
+  { label: "Invoice No.", align: "left", width: "13%" },
+  { label: "Invoice Date", align: "left", width: "16%" },
+  { label: "Due Date", align: "left", width: "16%" },
+  { label: "Qty", align: "center", width: "8%" },
+  { label: "Rate", align: "right", width: "12%" },
+  { label: "Invoice Amount ($)", align: "right", width: "15%" },
 ] as const;
 
 /** Fixed-format values stay `nowrap` — a date or invoice no. split across
- *  two lines reads as two separate values. This alone isn't what overflowed
- *  on mobile; the real bug was `table-layout:auto` never actually capping
- *  the row's width (see the comment on `EMAIL_TABLE_COLS`). The wrapping
- *  `<div>` around the table still gets `overflow-x:auto` as a last-resort
- *  fallback, not the primary mechanism.  */
+ *  two lines reads as two separate values. Only the variable-length
+ *  employee name and the headers (see the `<th>` below, no `white-space`
+ *  override) wrap; that's the table's pressure-release instead of a
+ *  layout that can silently cut a value short (see the comment on
+ *  `EMAIL_TABLE_COLS`). The wrapping `<div>` around the table still gets
+ *  `overflow-x:auto` as a last-resort fallback for the rare render that
+ *  genuinely doesn't fit — scrolling a value is always better than
+ *  showing a wrong one. */
 function emailCellStyle(align: "left" | "center" | "right" = "left"): string {
-  return `padding:3px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;overflow:hidden;vertical-align:top;`;
+  return `padding:2px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${align};white-space:nowrap;`;
 }
 
 /**
@@ -149,7 +155,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
 
   const headerCells = EMAIL_TABLE_COLS.map(
     (c) =>
-      `<th style="width:${c.width};padding:3px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;word-wrap:break-word;vertical-align:top;">${c.label}</th>`,
+      `<th style="width:${c.width};padding:2px 2px;border:1px solid ${EMAIL_TABLE_LINE};text-align:${c.align};color:${EMAIL_TABLE_TEXT};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;vertical-align:top;">${c.label}</th>`,
   ).join("");
 
   const rows = invoice.lineItems
@@ -200,7 +206,7 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
       </p>
     </div>
     <div style="padding:12px 4px 14px;overflow-x:auto;">
-      <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9px;color:${EMAIL_TABLE_TEXT};">
+      <table style="width:100%;border-collapse:collapse;font-size:8px;color:${EMAIL_TABLE_TEXT};">
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -313,24 +319,23 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
     .filter((s): s is string => Boolean(s && s.trim()))
     .join(", ");
 
-  // Widths here are AUTHORITATIVE, not hints — see the matching comment on
-  // `EMAIL_TABLE_COLS` in `buildInvoiceEmailHtml`: `table-layout:auto` (the
-  // default) never actually caps the row's width once nowrap cells demand
-  // more room, which is why Amount kept getting pushed off no matter how
-  // small the text got. `table-layout:fixed` on the `<table>` below makes
-  // these percentages a real ceiling, each sized off this column's actual
-  // nowrap character count at this font. The wrapping `<div>` still gets
-  // `overflow-x:auto` as a last-resort fallback, not the primary mechanism.
+  // Widths here are hints for the table's default auto layout, not a hard
+  // cap — see the matching comment on `EMAIL_TABLE_COLS` in
+  // `buildInvoiceEmailHtml` for why `table-layout:fixed` was tried and
+  // reverted (it silently truncated values and fragmented header words
+  // once a column's real-world width was a hair too tight). Only headers
+  // and Employee wrap; the rest of the row stays `nowrap`. The wrapping
+  // `<div>` still gets `overflow-x:auto` as a last-resort fallback.
   const reminderCols = [
-    { label: "Employee", align: "left", width: "15%" },
-    { label: "Invoice No.", align: "left", width: "21%" },
-    { label: "Invoice Date", align: "left", width: "19%" },
-    { label: "Due Date", align: "left", width: "19%" },
-    { label: "Days Overdue", align: "center", width: "11%" },
-    { label: "Invoice Amount ($)", align: "right", width: "15%" },
+    { label: "Employee", align: "left", width: "14%" },
+    { label: "Invoice No.", align: "left", width: "14%" },
+    { label: "Invoice Date", align: "left", width: "21%" },
+    { label: "Due Date", align: "left", width: "21%" },
+    { label: "Days Overdue", align: "center", width: "13%" },
+    { label: "Invoice Amount ($)", align: "right", width: "17%" },
   ] as const;
   const reminderCellStyle = (align: "left" | "center" | "right" = "left"): string =>
-    `padding:3px 2px;border:1px solid #000000;text-align:${align};overflow:hidden;vertical-align:top;`;
+    `padding:2px 2px;border:1px solid #000000;text-align:${align};vertical-align:top;`;
 
   const rows = invoice.lineItems
     .map(
@@ -349,7 +354,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
   const headerCells = reminderCols
     .map(
       (c) =>
-        `<th style="width:${c.width};padding:3px 2px;border:1px solid #000000;text-align:${c.align};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;word-wrap:break-word;vertical-align:top;">${c.label}</th>`,
+        `<th style="width:${c.width};padding:2px 2px;border:1px solid #000000;text-align:${c.align};font-size:7px;text-transform:uppercase;letter-spacing:0.01em;vertical-align:top;">${c.label}</th>`,
     )
     .join("");
 
@@ -377,7 +382,7 @@ function buildReminderEmailHtml(invoice: Invoice, company: CompanyProfile, follo
       <p style="margin:0 0 10px;">I hope you are doing well.</p>
       <p style="margin:0 0 10px;">I am writing to follow up on the payment status of the below invoice:</p>
       <div style="overflow-x:auto;margin:0 -12px;">
-        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:9px;margin:10px 0;">
+        <table style="width:100%;border-collapse:collapse;font-size:8px;margin:10px 0;">
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
