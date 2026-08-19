@@ -750,10 +750,6 @@ export function InvoiceForm({
       setError("Add at least one line item.");
       return null;
     }
-    if (existingAttachments.length === 0 && stagedFiles.length === 0) {
-      setError("At least one attachment is required.");
-      return null;
-    }
 
     const billingAddressPayload = addressPayload(billingAddress);
     const shippingAddressPayload = shipSameAsBilling
@@ -1230,16 +1226,20 @@ export function InvoiceForm({
                               <input
                                 className="input"
                                 type="email"
+                                multiple
                                 value={customer.cc}
                                 onChange={(e) => updateCustomerField({ cc: e.target.value })}
+                                placeholder="one@client.com, two@client.com"
                               />
                             </Field>
                             <Field label="Bcc">
                               <input
                                 className="input"
                                 type="email"
+                                multiple
                                 value={customer.bcc}
                                 onChange={(e) => updateCustomerField({ bcc: e.target.value })}
+                                placeholder="one@client.com, two@client.com"
                               />
                             </Field>
                           </div>
@@ -1629,7 +1629,7 @@ export function InvoiceForm({
 
                       {/* Attachments */}
                       <section className="card pad">
-                        <h2 className="section-title">Attachments *</h2>
+                        <h2 className="section-title">Attachments</h2>
 
                         {existingAttachments.length > 0 && (
                           <div style={{ marginBottom: "0.85rem" }}>

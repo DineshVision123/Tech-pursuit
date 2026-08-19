@@ -62,6 +62,27 @@ function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://techpursuitsystems.com").replace(/\/$/, "");
 }
 
+/**
+ * Customer `cc`/`bcc`/`secondaryEmail` fields are free-text inputs that
+ * (like a normal email client's Cc box) people fill in with more than one
+ * address separated by a comma or semicolon — see the `multiple` email
+ * input in `InvoiceForm.tsx`. Resend's `cc`/`bcc` params want one valid
+ * address per array element, so split/trim/dedupe here rather than shipping
+ * a raw "a@x.com, b@y.com" string as a single element — Resend rejects that
+ * whole send with a 422 `validation_error` instead of silently dropping it.
+ */
+function splitEmails(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return Array.from(
+    new Set(
+      value
+        .split(/[,;]/)
+        .map((v) => v.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
 /** Same rough "as low as $X/mo" estimate as `InvoicePreview.tsx`'s
  *  `estimateMonthly` — illustrative only, not a real financing quote. */
 function estimateMonthly(totalCents: number): string {
@@ -223,10 +244,8 @@ export async function sendInvoiceSubmittedEmail(
     return { ok: false, error: "This customer has no email address on file." };
   }
 
-  const cc = [invoice.customer.cc, invoice.customer.secondaryEmail].filter(
-    (v): v is string => Boolean(v),
-  );
-  const bcc = invoice.customer.bcc ? [invoice.customer.bcc] : undefined;
+  const cc = [...splitEmails(invoice.customer.cc), ...splitEmails(invoice.customer.secondaryEmail)];
+  const bcc = splitEmails(invoice.customer.bcc);
 
   try {
     const resend = new Resend(apiKey);
@@ -234,7 +253,7 @@ export async function sendInvoiceSubmittedEmail(
       from,
       to: invoice.customer.primaryEmail,
       cc: cc.length > 0 ? cc : undefined,
-      bcc,
+      bcc: bcc.length > 0 ? bcc : undefined,
       subject,
       html: buildInvoiceEmailHtml(invoice, company),
     });
@@ -377,10 +396,8 @@ export async function sendPaymentReminderEmail(
     return { ok: false, error: "This customer has no email address on file." };
   }
 
-  const cc = [invoice.customer.cc, invoice.customer.secondaryEmail].filter(
-    (v): v is string => Boolean(v),
-  );
-  const bcc = invoice.customer.bcc ? [invoice.customer.bcc] : undefined;
+  const cc = [...splitEmails(invoice.customer.cc), ...splitEmails(invoice.customer.secondaryEmail)];
+  const bcc = splitEmails(invoice.customer.bcc);
 
   try {
     const resend = new Resend(apiKey);
@@ -388,7 +405,7 @@ export async function sendPaymentReminderEmail(
       from,
       to: invoice.customer.primaryEmail,
       cc: cc.length > 0 ? cc : undefined,
-      bcc,
+      bcc: bcc.length > 0 ? bcc : undefined,
       subject: `[FOLLOW-UP #${followupNumber}] Pending Payment — Invoice ${invoice.invoiceNo} (${invoice.customer.name})`,
       html: buildReminderEmailHtml(invoice, company, followupNumber),
     });
