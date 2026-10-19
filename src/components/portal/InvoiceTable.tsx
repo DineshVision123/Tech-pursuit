@@ -21,12 +21,20 @@ function getServerSnapshot(): Member | null {
 
 type BusyMode = "keep" | "reclaim";
 
+// `.btn` is `white-space: nowrap`, which makes the long hint overflow the card
+// and squeezes the icon to zero width — let these two wrap instead.
 const choiceStyle: React.CSSProperties = {
   width: "100%",
   justifyContent: "flex-start",
   textAlign: "left",
   alignItems: "flex-start",
+  whiteSpace: "normal",
+  gap: "0.65rem",
 };
+
+const choiceIconStyle: React.CSSProperties = { flexShrink: 0, marginTop: "0.15rem" };
+
+const choiceTextStyle: React.CSSProperties = { gap: "0.15rem", minWidth: 0 };
 
 /**
  * `highestSequence` is the sequence of the top (highest-numbered) invoice
@@ -183,11 +191,11 @@ export function InvoiceTable({
                       onClick={() => void confirmDelete(false)}
                     >
                       {busyMode === "keep" ? (
-                        <Loader2 size={15} className="spin" />
+                        <Loader2 size={15} className="spin" style={choiceIconStyle} />
                       ) : (
-                        <Trash2 size={15} />
+                        <Trash2 size={15} style={choiceIconStyle} />
                       )}
-                      <span className="stack" style={{ gap: "0.15rem" }}>
+                      <span className="stack" style={choiceTextStyle}>
                         <span>Just delete it</span>
                         <small style={{ fontWeight: 400, opacity: 0.85 }}>
                           The number {pending.invoiceNo} will never be used again. Pick this if you
@@ -203,11 +211,11 @@ export function InvoiceTable({
                       onClick={() => void confirmDelete(true)}
                     >
                       {busyMode === "reclaim" ? (
-                        <Loader2 size={15} className="spin" />
+                        <Loader2 size={15} className="spin" style={choiceIconStyle} />
                       ) : (
-                        <RotateCcw size={15} />
+                        <RotateCcw size={15} style={choiceIconStyle} />
                       )}
-                      <span className="stack" style={{ gap: "0.15rem" }}>
+                      <span className="stack" style={choiceTextStyle}>
                         <span>Delete and free up the number</span>
                         <small style={{ fontWeight: 400, opacity: 0.85 }}>
                           Your next new invoice will be numbered {pending.invoiceNo} again.
