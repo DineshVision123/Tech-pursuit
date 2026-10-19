@@ -101,9 +101,17 @@ export const STATUS_LABEL: Record<InvoiceStatus, string> = {
 /** The five statuses in lifecycle order — used for the pipeline stepper. */
 export const STATUS_ORDER: InvoiceStatus[] = ["draft", "approved", "submitted", "paid"];
 
+/** Numeric tail of an invoice number — `INV-0117` → 117, and the legacy
+ *  `INV-2026-0003` → 3. 0 when the tail isn't a number. */
+export function invoiceSequence(invoiceNo: string): number {
+  const n = parseInt(invoiceNo.split("-").pop() ?? "", 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function humanizeAction(action: string): string {
   const map: Record<string, string> = {
     "invoice.created": "created invoice",
+    "invoice.deleted": "deleted invoice",
     "invoice.edited": "edited invoice",
     "invoice.status_changed": "changed status",
     "invoice.attachment_added": "added attachment",

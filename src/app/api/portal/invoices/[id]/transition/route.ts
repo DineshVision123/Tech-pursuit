@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   const { to, reason, emailSubject } = parsed.data;
 
-  const rows = await sql`select status from invoices where id = ${id}`;
+  const rows = await sql`select status from invoices where id = ${id} and deleted_at is null`;
   if (rows.length === 0) {
     return NextResponse.json({ success: false, data: null, error: "Invoice not found." }, { status: 404 });
   }

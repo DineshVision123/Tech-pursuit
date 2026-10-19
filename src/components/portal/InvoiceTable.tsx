@@ -2,10 +2,10 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { deleteInvoice } from "@/lib/portal/api";
-import { money, formatDate } from "@/lib/portal/format";
+import { money, formatDate, invoiceSequence } from "@/lib/portal/format";
 import { loadStoredMember } from "@/lib/portal/session";
 import { StatusBadge } from "./StatusBadge";
 import type { Invoice, Member } from "@/lib/portal/types";
@@ -19,36 +19,61 @@ function getServerSnapshot(): Member | null {
   return null;
 }
 
-export function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
+type BusyMode = "keep" | "reclaim";
+
+const choiceStyle: React.CSSProperties = {
+  width: "100%",
+  justifyContent: "flex-start",
+  textAlign: "left",
+  alignItems: "flex-start",
+};
+
+/**
+ * `highestSequence` is the sequence of the top (highest-numbered) invoice
+ * across *all* invoices, from the global next number — only that one gets the
+ * "free up the number" option, since next = max + 1 and gaps are never filled:
+ * deleting any older invoice can't change what the next number will be.
+ */
+export function InvoiceTable({
+  invoices,
+  highestSequence,
+}: {
+  invoices: Invoice[];
+  highestSequence: number | null;
+}) {
   const router = useRouter();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<Invoice | null>(null);
+  const [busyMode, setBusyMode] = useState<BusyMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const member = useSyncExternalStore(noopSubscribe, loadStoredMember, getServerSnapshot);
-  const canDelete = member?.canDeleteInvoices ?? false;
 
-  async function onDelete(inv: Invoice, e: React.MouseEvent) {
+  const isHighest = (inv: Invoice) =>
+    highestSequence !== null && invoiceSequence(inv.invoiceNo) === highestSequence;
+
+  function onDelete(inv: Invoice, e: React.MouseEvent) {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        `Delete invoice ${inv.invoiceNo}? This removes it from the list and dashboard totals — it can't be undone from here.`,
-      )
-    ) {
-      return;
-    }
     setError(null);
-    setBusyId(inv.id);
-    const res = await deleteInvoice(inv.id);
-    setBusyId(null);
+    setPending(inv);
+  }
+
+  async function confirmDelete(reclaimNumber: boolean) {
+    if (!pending) return;
+    setBusyMode(reclaimNumber ? "reclaim" : "keep");
+    const res = await deleteInvoice(pending.id, reclaimNumber);
+    setBusyMode(null);
     if (!res.success) {
       setError(res.error ?? "Could not delete the invoice.");
       return;
     }
+    setPending(null);
     router.refresh();
   }
 
   if (invoices.length === 0) {
     return <div className="empty pad">No invoices match these filters.</div>;
   }
+
+  const busy = busyMode !== null;
 
   return (
     <div className="table-wrap">
@@ -100,20 +125,16 @@ export function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
                 <StatusBadge status={inv.status} />
               </td>
               <td className="right">
-                {canDelete && (
+                {member && (
                   <button
                     type="button"
                     className="icon-btn"
-                    onClick={(e) => void onDelete(inv, e)}
-                    disabled={busyId === inv.id}
+                    onClick={(e) => onDelete(inv, e)}
+                    disabled={busy && pending?.id === inv.id}
                     aria-label={`Delete invoice ${inv.invoiceNo}`}
                     title="Delete invoice"
                   >
-                    {busyId === inv.id ? (
-                      <Loader2 size={15} className="spin" />
-                    ) : (
-                      <Trash2 size={15} />
-                    )}
+                    <Trash2 size={15} />
                   </button>
                 )}
               </td>
@@ -124,6 +145,116 @@ export function InvoiceTable({ invoices }: { invoices: Invoice[] }) {
           ))}
         </motion.tbody>
       </table>
+
+      <AnimatePresence>
+        {pending && (
+          <motion.div
+            className="modal-scrim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              if (!busy) setPending(null);
+            }}
+          >
+            <motion.div
+              className="modal card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-invoice-title"
+              initial={{ scale: 0.94, y: 12, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 id="delete-invoice-title">Delete invoice {pending.invoiceNo}?</h3>
+
+              {isHighest(pending) ? (
+                <>
+                  <p className="muted">This can&apos;t be undone. Pick one:</p>
+                  {error && <p className="inline-error">{error}</p>}
+                  <div className="stack" style={{ gap: "0.6rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={choiceStyle}
+                      disabled={busy}
+                      onClick={() => void confirmDelete(false)}
+                    >
+                      {busyMode === "keep" ? (
+                        <Loader2 size={15} className="spin" />
+                      ) : (
+                        <Trash2 size={15} />
+                      )}
+                      <span className="stack" style={{ gap: "0.15rem" }}>
+                        <span>Just delete it</span>
+                        <small style={{ fontWeight: 400, opacity: 0.85 }}>
+                          The number {pending.invoiceNo} will never be used again. Pick this if you
+                          already sent this invoice to the customer.
+                        </small>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={choiceStyle}
+                      disabled={busy}
+                      onClick={() => void confirmDelete(true)}
+                    >
+                      {busyMode === "reclaim" ? (
+                        <Loader2 size={15} className="spin" />
+                      ) : (
+                        <RotateCcw size={15} />
+                      )}
+                      <span className="stack" style={{ gap: "0.15rem" }}>
+                        <span>Delete and free up the number</span>
+                        <small style={{ fontWeight: 400, opacity: 0.85 }}>
+                          Your next new invoice will be numbered {pending.invoiceNo} again.
+                        </small>
+                      </span>
+                    </button>
+                  </div>
+                  <div className="row" style={{ justifyContent: "flex-end", marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={() => setPending(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="muted">This can&apos;t be undone.</p>
+                  {error && <p className="inline-error">{error}</p>}
+                  <div className="row" style={{ justifyContent: "flex-end", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={() => setPending(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      disabled={busy}
+                      onClick={() => void confirmDelete(false)}
+                    >
+                      {busy ? <Loader2 size={15} className="spin" /> : <Trash2 size={15} />}
+                      Delete invoice
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

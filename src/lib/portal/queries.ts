@@ -136,7 +136,8 @@ export async function getInvoices(filters?: {
   const search = filters?.search?.trim();
   const rows = await sql`
     select id from invoices
-    where (${status ?? null}::text is null or status = ${status ?? null})
+    where deleted_at is null
+      and (${status ?? null}::text is null or status = ${status ?? null})
       and (${search ?? null}::text is null or invoice_no ilike ${search ? `%${search}%` : null})
     order by created_at desc
   `;
@@ -144,7 +145,7 @@ export async function getInvoices(filters?: {
 }
 
 export async function getInvoice(id: string): Promise<Invoice> {
-  const rows = await sql`select * from invoices where id = ${id}`;
+  const rows = await sql`select * from invoices where id = ${id} and deleted_at is null`;
   if (rows.length === 0) throw new Error("Invoice not found");
   return rowToInvoice(rows[0] as Record<string, unknown>);
 }
@@ -257,7 +258,7 @@ function statusMeaning(status: InvoiceStatus): string {
 
 export async function getDashboard(): Promise<DashboardSummary> {
   const [statusRows, totalsRows, overdueRows, activityRows] = await Promise.all([
-    sql`select status, count(*)::int as count from invoices group by status`,
+    sql`select status, count(*)::int as count from invoices where deleted_at is null group by status`,
     sql`
       select
         coalesce(sum(li.amount_cents), 0)::bigint as total_cents,
@@ -265,12 +266,13 @@ export async function getDashboard(): Promise<DashboardSummary> {
         coalesce(sum(li.amount_cents) filter (where i.status = 'paid'), 0)::bigint as paid_cents
       from invoices i
       left join invoice_line_items li on li.invoice_id = i.id
+      where i.deleted_at is null
     `,
     sql`
       select count(*)::int as count, coalesce(sum(li.amount_cents), 0)::bigint as cents
       from invoices i
       left join invoice_line_items li on li.invoice_id = i.id
-      where i.status in ('approved', 'submitted') and i.due_date < current_date
+      where i.deleted_at is null and i.status in ('approved', 'submitted') and i.due_date < current_date
     `,
     sql`select * from audit_log order by at desc limit 8`,
   ]);
@@ -311,7 +313,7 @@ export async function getDashboard(): Promise<DashboardSummary> {
  * payor needs to see.
  */
 export async function getPublicInvoiceView(token: string): Promise<PublicInvoiceView | null> {
-  const rows = await sql`select * from invoices where public_token = ${token}`;
+  const rows = await sql`select * from invoices where public_token = ${token} and deleted_at is null`;
   if (rows.length === 0) return null;
   const r = rows[0] as Record<string, unknown>;
 

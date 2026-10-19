@@ -1,5 +1,6 @@
 import { getDashboard, getInvoices } from "@/lib/portal/queries";
-import { money } from "@/lib/portal/format";
+import { nextInvoiceNumber } from "@/lib/portal/invoice-number";
+import { invoiceSequence, money } from "@/lib/portal/format";
 import { ApiError } from "@/components/portal/ApiError";
 import { RevealItem } from "@/components/portal/Reveal";
 import { DashboardTiles } from "@/components/portal/DashboardTiles";
@@ -10,11 +11,17 @@ import { InvoiceTable } from "@/components/portal/InvoiceTable";
 export default async function DashboardPage() {
   let data;
   let recent;
+  let nextNo: string | null;
   try {
-    [data, recent] = await Promise.all([getDashboard(), getInvoices()]);
+    [data, recent, nextNo] = await Promise.all([
+      getDashboard(),
+      getInvoices(),
+      nextInvoiceNumber().catch(() => null),
+    ]);
   } catch (e) {
     return <ApiError message={e instanceof Error ? e.message : "Unknown error"} />;
   }
+  const highestSequence = nextNo ? invoiceSequence(nextNo) - 1 : null;
 
   return (
     <div className="stack-lg">
@@ -43,7 +50,7 @@ export default async function DashboardPage() {
             Latest invoices
           </h2>
         </div>
-        <InvoiceTable invoices={recent.slice(0, 6)} />
+        <InvoiceTable invoices={recent.slice(0, 6)} highestSequence={highestSequence} />
       </RevealItem>
     </div>
   );

@@ -1,5 +1,6 @@
 import { getInvoices } from "@/lib/portal/queries";
-import { money } from "@/lib/portal/format";
+import { nextInvoiceNumber } from "@/lib/portal/invoice-number";
+import { invoiceSequence, money } from "@/lib/portal/format";
 import { ApiError } from "@/components/portal/ApiError";
 import { InvoiceTable } from "@/components/portal/InvoiceTable";
 import { InvoiceFilters } from "@/components/portal/InvoiceFilters";
@@ -12,12 +13,20 @@ export default async function InvoicesPage({
 }) {
   const { status, q } = await searchParams;
 
+  // The top invoice is found from the global next number, not this (possibly
+  // status-filtered) list. A failed lookup just means no row gets the
+  // "free up the number" option — it never blocks the list itself.
   let invoices;
+  let nextNo: string | null;
   try {
-    invoices = await getInvoices({ status: status as InvoiceStatus | undefined, search: q });
+    [invoices, nextNo] = await Promise.all([
+      getInvoices({ status: status as InvoiceStatus | undefined, search: q }),
+      nextInvoiceNumber().catch(() => null),
+    ]);
   } catch (e) {
     return <ApiError message={e instanceof Error ? e.message : "Unknown error"} />;
   }
+  const highestSequence = nextNo ? invoiceSequence(nextNo) - 1 : null;
 
   const totalValue = invoices.reduce((sum, inv) => sum + inv.totals.totalCents, 0);
 
@@ -31,7 +40,7 @@ export default async function InvoicesPage({
         </span>
       </div>
       <div className="card">
-        <InvoiceTable invoices={invoices} />
+        <InvoiceTable invoices={invoices} highestSequence={highestSequence} />
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (member instanceof NextResponse) return member;
   const { id } = await params;
 
-  const existing = await sql`select status, customer_id from invoices where id = ${id}`;
+  const existing = await sql`select status, customer_id from invoices where id = ${id} and deleted_at is null`;
   if (existing.length === 0) {
     return NextResponse.json({ success: false, data: null, error: "Invoice not found." }, { status: 404 });
   }
@@ -118,18 +118,45 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return NextResponse.json({ success: true, data: invoice, error: null });
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * Soft delete, allowed at any status and for any signed-in member. Never a
+ * hard `delete from invoices` — that would cascade away the line items and
+ * attachments and orphan the audit trail. `?reclaimNumber=true` also sets
+ * `number_reclaimed_at`, which drops the row out of `nextInvoiceNumber()`'s
+ * scan so the next new invoice reuses its number; the UI only offers that for
+ * the top (highest-numbered) invoice, the only one where it changes anything.
+ */
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const member = await requireMember();
   if (member instanceof NextResponse) return member;
-  if (!member.canDeleteInvoices) {
-    return NextResponse.json(
-      { success: false, data: null, error: "You don't have permission to delete invoices." },
-      { status: 403 },
-    );
-  }
   const { id } = await params;
+  const reclaimNumber = new URL(request.url).searchParams.get("reclaimNumber") === "true";
 
-  await sql`insert into audit_log (invoice_id, action, actor) values (${id}, 'invoice.deleted', ${member.email})`;
-  await sql`delete from invoices where id = ${id}`;
+  const notFound = () =>
+    NextResponse.json({ success: false, data: null, error: "Invoice not found." }, { status: 404 });
+
+  let before;
+  try {
+    before = await getInvoice(id);
+  } catch {
+    return notFound();
+  }
+
+  // `deleted_at is null` makes a second delete of the same invoice a no-op
+  // that reports not-found rather than re-stamping it.
+  const updated = await sql`
+    update invoices set
+      deleted_at = now(),
+      number_reclaimed_at = case when ${reclaimNumber}::boolean then now() else null end
+    where id = ${id} and deleted_at is null
+    returning id
+  `;
+  if (updated.length === 0) return notFound();
+
+  const reason = reclaimNumber ? `Number ${before.invoiceNo} freed for reuse.` : null;
+  await sql`
+    insert into audit_log (invoice_id, action, actor, reason, before)
+    values (${id}, 'invoice.deleted', ${member.email}, ${reason}, ${JSON.stringify(before)})
+  `;
   return NextResponse.json({ success: true, data: { deleted: true }, error: null });
 }

@@ -41,7 +41,8 @@ export async function GET(request: Request) {
 
   const due = await sql`
     select id from invoices
-    where status in ('submitted', 'approved')
+    where deleted_at is null
+      and status in ('submitted', 'approved')
       and due_date < current_date
       and (
         reminder_count = 0

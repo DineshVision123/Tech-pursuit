@@ -20,11 +20,17 @@ import { sql } from "./db";
  * trailing sequence to compare — e.g. `INV-2026-0002` and a fresh
  * `INV-0002` both read as `2`. With `INV-2026-0001`/`INV-2026-0002`
  * already on file, the next number is `INV-0003`, not a reset to
- * `INV-0001`. */
+ * `INV-0001`.
+ *
+ * Deliberately *not* filtered on `deleted_at`: a deleted invoice keeps its
+ * number reserved (gaps are never filled) unless it was deleted with
+ * "free up the number", which sets `number_reclaimed_at` and drops it out
+ * of this scan so the next invoice reuses it. */
 export async function nextInvoiceNumber(): Promise<string> {
   const rows = await sql`
     select invoice_no from invoices
     where invoice_no ~ '-[0-9]+$'
+      and number_reclaimed_at is null
     order by (regexp_replace(invoice_no, '.*-', ''))::int desc
     limit 1
   `;

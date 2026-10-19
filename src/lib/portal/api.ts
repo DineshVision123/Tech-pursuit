@@ -90,8 +90,10 @@ export const createInvoice = (payload: CreateInvoicePayload) =>
 export const updateInvoice = (id: string, payload: Partial<CreateInvoicePayload>) =>
   clientRequest<Invoice>(`/invoices/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
 
-export const deleteInvoice = (id: string) =>
-  clientRequest<{ deleted: boolean }>(`/invoices/${id}`, { method: "DELETE" });
+export const deleteInvoice = (id: string, reclaimNumber = false) =>
+  clientRequest<{ deleted: boolean }>(`/invoices/${id}${reclaimNumber ? "?reclaimNumber=true" : ""}`, {
+    method: "DELETE",
+  });
 
 export const transitionInvoice = (
   id: string,
