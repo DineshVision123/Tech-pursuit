@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/portal/db";
 import { requireMember } from "@/lib/portal/auth-server";
-import { getInvoice, getCompanyProfile } from "@/lib/portal/queries";
+import { getInvoice, getCompanyProfile, getCompanyLogo, getAttachmentFiles } from "@/lib/portal/queries";
 import { sendInvoiceSubmittedEmail } from "@/lib/portal/email";
+import { renderInvoicePdf } from "@/lib/portal/invoice-pdf";
 import type { InvoiceStatus } from "@/lib/portal/types";
 
 export const runtime = "nodejs";
@@ -62,9 +63,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // its current status — if it fails, rather than marking an invoice
   // "submitted" when the customer was never actually notified.
   if (to === "submitted") {
-    const [invoice, company] = await Promise.all([getInvoice(id), getCompanyProfile()]);
+    const [invoice, company, logo, files] = await Promise.all([
+      getInvoice(id),
+      getCompanyProfile(),
+      getCompanyLogo(),
+      getAttachmentFiles(id),
+    ]);
     const subject = emailSubject?.trim() || `Your invoice is ready — ${invoice.invoiceNo} from ${company.companyName}`;
-    const sent = await sendInvoiceSubmittedEmail(invoice, company, subject);
+
+    // The invoice itself as a PDF first, then everything uploaded to it.
+    // Failing to build the PDF fails the send (and so the transition) —
+    // same "never mark submitted unless the customer really got it" rule.
+    let pdf: Buffer;
+    try {
+      pdf = renderInvoicePdf(invoice, company, logo);
+    } catch (err) {
+      console.error("[invoice-submit] Could not render invoice PDF:", err);
+      return NextResponse.json(
+        { success: false, data: null, error: "Could not generate the invoice PDF." },
+        { status: 500 },
+      );
+    }
+    const attachments = [
+      { filename: `${invoice.invoiceNo}.pdf`, content: pdf, contentType: "application/pdf" },
+      ...files.map((f) => ({ filename: f.filename, content: f.bytes, contentType: f.mimeType })),
+    ];
+
+    const sent = await sendInvoiceSubmittedEmail(invoice, company, subject, attachments);
     if (!sent.ok) {
       return NextResponse.json({ success: false, data: null, error: sent.error }, { status: 502 });
     }

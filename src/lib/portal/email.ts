@@ -4,6 +4,17 @@ import type { CompanyProfile, Invoice } from "./types";
 
 type SendResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
 
+export interface EmailAttachment {
+  readonly filename: string;
+  readonly content: Buffer;
+  readonly contentType?: string;
+}
+
+/** Resend rejects emails over 40MB *after* base64 encoding (which inflates
+ *  by ~4/3), so cap the raw total a little under 30MB and say why, rather
+ *  than surfacing Resend's generic failure. */
+const MAX_ATTACHMENT_BYTES = 28 * 1024 * 1024;
+
 /**
  * Sends a login OTP code via Resend. Reuses the same `RESEND_API_KEY` the
  * main site's contact form already uses (`src/lib/email.ts`) — one Resend
@@ -248,11 +259,15 @@ function buildInvoiceEmailHtml(invoice: Invoice, company: CompanyProfile): strin
  * this returns an error, the transition route does NOT mark the invoice
  * submitted — better to leave it in "approved" than to tell staff a
  * customer was notified when they weren't.
+ *
+ * `attachments` carries the invoice PDF plus every file uploaded to the
+ * invoice — the transition route assembles them.
  */
 export async function sendInvoiceSubmittedEmail(
   invoice: Invoice,
   company: CompanyProfile,
   subject: string,
+  attachments: readonly EmailAttachment[] = [],
 ): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = company.emailFrom || process.env.INVOICE_FROM_EMAIL;
@@ -267,6 +282,15 @@ export async function sendInvoiceSubmittedEmail(
     return { ok: false, error: "This customer has no email address on file." };
   }
 
+  const attachmentBytes = attachments.reduce((sum, a) => sum + a.content.length, 0);
+  if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
+    const mb = (attachmentBytes / (1024 * 1024)).toFixed(1);
+    return {
+      ok: false,
+      error: `The invoice PDF and attachments total ${mb} MB, over the ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB email limit. Remove some attachments and try again.`,
+    };
+  }
+
   const cc = [...splitEmails(invoice.customer.cc), ...splitEmails(invoice.customer.secondaryEmail)];
   const bcc = splitEmails(invoice.customer.bcc);
 
@@ -279,6 +303,14 @@ export async function sendInvoiceSubmittedEmail(
       bcc: bcc.length > 0 ? bcc : undefined,
       subject,
       html: buildInvoiceEmailHtml(invoice, company),
+      attachments:
+        attachments.length > 0
+          ? attachments.map((a) => ({
+              filename: a.filename,
+              content: a.content,
+              contentType: a.contentType,
+            }))
+          : undefined,
     });
 
     if (error) {

@@ -212,6 +212,31 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
   };
 }
 
+/** Raw logo bytes for the server-rendered invoice PDF (`invoice-pdf.ts`) —
+ *  `getCompanyProfile` deliberately only exposes a URL, never the bytes. */
+export async function getCompanyLogo(): Promise<{ bytes: Buffer; mime: string } | null> {
+  const rows = await sql`select logo_bytes, logo_mime from company_profile limit 1`;
+  const r = rows[0] as { logo_bytes: Buffer | null; logo_mime: string | null } | undefined;
+  if (!r?.logo_bytes || !r.logo_mime) return null;
+  return { bytes: r.logo_bytes, mime: r.logo_mime };
+}
+
+/** Every uploaded file on an invoice, bytes included — for attaching to the
+ *  outgoing invoice email. `getInvoice` only carries their metadata. */
+export async function getAttachmentFiles(
+  invoiceId: string,
+): Promise<{ filename: string; mimeType: string; bytes: Buffer }[]> {
+  const rows = await sql`
+    select filename, mime_type, bytes from invoice_attachments
+    where invoice_id = ${invoiceId} order by uploaded_at asc
+  `;
+  return rows.map((r) => ({
+    filename: r.filename as string,
+    mimeType: r.mime_type as string,
+    bytes: r.bytes as Buffer,
+  }));
+}
+
 // Mirrors the API route's actual `ALLOWED_NEXT` — see
 // `src/app/api/portal/invoices/[id]/transition/route.ts` for how this was
 // reconciled from the two real UI call sites.
